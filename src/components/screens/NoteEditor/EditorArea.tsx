@@ -26,13 +26,7 @@ export function EditorArea() {
   
   const activeNote = useNotesStore(s => s.activeNote)
   const saveNote = useNotesStore(s => s.saveNote)
-  const openNoteTitle = useNotesStore(s => {
-    // Helper to find and open a note by title (used by wikilinks)
-    return (title: string) => {
-      const target = s.notes.find(n => n.title.toLowerCase() === title.toLowerCase())
-      if (target) s.openNote(target.id)
-    }
-  })
+
 
   // Set up editor
   useEffect(() => {
@@ -90,14 +84,22 @@ export function EditorArea() {
     const el = containerRef.current
     if (!el) return
 
-    const handleWikilink = (e: Event) => {
+    const handleWikilink = async (e: Event) => {
       const title = (e as CustomEvent).detail.title
-      openNoteTitle(title)
+      const store = useNotesStore.getState()
+      const target = store.notes.find(n => n.title.toLowerCase() === title.toLowerCase())
+      
+      if (target) {
+        store.openNote(target.id)
+      } else {
+        const newNote = await store.createNote('capture', title)
+        store.openNote(newNote.id)
+      }
     }
 
     el.addEventListener('genten:open-wikilink', handleWikilink)
     return () => el.removeEventListener('genten:open-wikilink', handleWikilink)
-  }, [openNoteTitle])
+  }, [])
 
   // Listen for external updates to the note (e.g. from TARS Assistant Tab)
   useEffect(() => {
@@ -127,7 +129,7 @@ export function EditorArea() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Title Editor & Actions */}
-      <div className="px-[60px] pt-[40px] pb-4 flex-shrink-0">
+      <div className="px-6 pt-6 md:px-[60px] md:pt-[40px] pb-4 flex-shrink-0">
         <div className="max-w-[860px] mx-auto flex items-center gap-4">
           <input
             type="text"
@@ -198,8 +200,8 @@ export function EditorArea() {
 
       {/* Editor Scroller */}
       <div className="flex-1 overflow-y-auto no-scrollbar pb-32">
-        {/* The 680px constraint is handled by CM6 theming or wrapper */}
-        <div className="max-w-[860px] mx-auto px-[60px] h-full">
+        {/* The 860px constraint is handled by CM6 theming or wrapper */}
+        <div className="max-w-[860px] mx-auto px-6 md:px-[60px] h-full">
           <div ref={containerRef} className="h-full editor-container" />
         </div>
       </div>

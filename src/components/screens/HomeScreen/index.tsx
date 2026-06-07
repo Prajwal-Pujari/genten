@@ -15,7 +15,7 @@ export function HomeScreen() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="flex gap-8 p-10 max-w-[1200px] mx-auto">
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8 p-6 md:p-10 max-w-[1200px] mx-auto">
         {/* Left column — 60% */}
         <div className="flex-[3] min-w-0">
           {/* Date block */}

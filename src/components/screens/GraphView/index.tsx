@@ -15,11 +15,11 @@ export function GraphView() {
   const isAIConnected = useConnectionStore(s => s.effectiveState)() === 'connected'
 
   return (
-    <div className="relative h-full w-full bg-[#0F0D0B] overflow-hidden">
+    <div className="relative h-full w-full bg-bg-base overflow-hidden">
       
       {/* Top-left Label */}
       <div className="absolute top-6 left-6 z-10 pointer-events-none">
-        <h1 className="font-ui text-sm font-medium text-[#D8D2C8] tracking-widest uppercase opacity-70">
+        <h1 className="font-ui text-sm font-medium text-text-tertiary tracking-widest uppercase opacity-80">
           {isAIConnected ? 'Explicit + Semantic Links' : 'Explicit Links'}
         </h1>
       </div>
@@ -29,8 +29,8 @@ export function GraphView() {
         
         {/* Semantic Slider (AI only) */}
         {isAIConnected && (
-          <div className="flex items-center gap-3 bg-[#1A1714]/80 backdrop-blur-md px-4 py-2 rounded-full border border-[#2D2522]">
-            <span className="font-ui text-[10px] text-[#9B9590] uppercase tracking-wider">Semantic Threshold</span>
+          <div className="flex items-center gap-3 bg-surface-primary/80 backdrop-blur-md px-4 py-2 rounded-full border border-border-subtle">
+            <span className="font-ui text-[10px] text-text-tertiary uppercase tracking-wider">Semantic Threshold</span>
             <input
               type="range"
               min="0.1"
@@ -38,14 +38,14 @@ export function GraphView() {
               step="0.1"
               value={semanticThreshold}
               onChange={(e) => setSemanticThreshold(parseFloat(e.target.value))}
-              className="w-24 accent-[#6B5CE7]"
+              className="w-24 accent-brand-primary"
             />
-            <span className="font-code text-[10px] text-[#9B9590]">{semanticThreshold.toFixed(1)}</span>
+            <span className="font-code text-[10px] text-text-tertiary">{semanticThreshold.toFixed(1)}</span>
           </div>
         )}
 
         {/* Filter Pills */}
-        <div className="flex bg-[#1A1714]/80 backdrop-blur-md p-1 rounded-full border border-[#2D2522]">
+        <div className="flex bg-surface-primary/80 backdrop-blur-md p-1 rounded-full border border-border-subtle">
           {(['All', 'Study', 'Problems', 'Design', 'Diagrams'] as GraphFilter[]).map(f => (
             <button
               key={f}
@@ -53,8 +53,8 @@ export function GraphView() {
               className={`
                 px-4 py-1.5 rounded-full font-ui text-xs transition-colors
                 ${filter === f 
-                  ? 'bg-[#2D2522] text-[#F5F0E8] shadow-sm' 
-                  : 'text-[#9B9590] hover:text-[#D8D2C8]'}
+                  ? 'bg-text-primary text-surface-primary shadow-sm' 
+                  : 'text-text-tertiary hover:text-text-secondary'}
               `}
             >
               {f}

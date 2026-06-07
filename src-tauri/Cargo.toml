@@ -1,6 +1,6 @@
 [package]
 name = "genten"
-version = "0.1.0"
+version = "0.2.0"
 description = "Genten — Personal Knowledge OS"
 authors = ["you"]
 edition = "2021"

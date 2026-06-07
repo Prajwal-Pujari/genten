@@ -15,7 +15,7 @@ export function NoteEditor() {
     <div className="h-full flex flex-row w-full bg-bg-base overflow-hidden">
       {/* Left Panel: File Tree */}
       {(!sidebarCollapsed && !focusMode) && (
-        <div className="w-[240px] border-r border-border-subtle flex-shrink-0 bg-surface-primary">
+        <div className="hidden md:flex flex-col w-[240px] border-r border-border-subtle flex-shrink-0 bg-surface-primary">
           <FileTree />
         </div>
       )}
@@ -27,7 +27,7 @@ export function NoteEditor() {
 
       {/* Right Panel: Context Tabs (Links, TARS, Similar) */}
       {!focusMode && (
-        <div className="w-[300px] border-l border-border-subtle flex-shrink-0 bg-surface-primary">
+        <div className="hidden lg:flex flex-col w-[300px] border-l border-border-subtle flex-shrink-0 bg-surface-primary">
           <RightPanel />
         </div>
       )}

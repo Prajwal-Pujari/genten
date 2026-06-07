@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { NavRail } from './components/layout/NavRail'
 import { AppFooter } from './components/layout/AppFooter'
 import { MainContent } from './components/layout/MainContent'
+import { Titlebar } from './components/layout/Titlebar'
 import { ToastContainer } from './components/shared/ToastContainer'
 import { DemoToggle } from './components/shared/DemoToggle'
 import { QuickOpen } from './components/overlays/QuickOpen'
@@ -68,7 +69,8 @@ export default function App() {
   // Setup wizard — full screen, no nav
   if (activeScreen === 'setup') {
     return (
-      <div className="h-screen bg-bg-base">
+      <div className="h-screen bg-bg-base pt-[30px]">
+        <Titlebar />
         <MainContent />
         <ToastContainer />
       </div>
@@ -76,7 +78,8 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-bg-base">
+    <div className="h-screen flex flex-col bg-bg-base pt-[30px]">
+      <Titlebar />
       <div className="flex flex-col-reverse md:flex-row flex-1 overflow-hidden">
         {/* Nav rail — hidden in focus mode */}
         {!focusMode && <NavRail />}

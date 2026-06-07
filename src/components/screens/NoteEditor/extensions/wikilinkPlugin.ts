@@ -19,9 +19,19 @@ class WikilinkWidget extends WidgetType {
 
   toDOM(): HTMLElement {
     const span = document.createElement('span')
-    span.className = 'cm-wikilink'
+    span.className = 'cm-wikilink cursor-pointer hover:underline text-brand-primary'
     span.textContent = this.title
     span.title = `Open: ${this.title}`
+    
+    span.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      span.dispatchEvent(new CustomEvent('genten:open-wikilink', {
+        detail: { title: this.title },
+        bubbles: true,
+      }))
+    })
+
     return span
   }
 
@@ -78,23 +88,5 @@ export const wikilinkPlugin = ViewPlugin.fromClass(
   },
   {
     decorations: (v) => v.decorations,
-    eventHandlers: {
-      click: (e: MouseEvent, view: EditorView) => {
-        const target = e.target as HTMLElement
-        if (target.classList.contains('cm-wikilink')) {
-          const title = target.textContent
-          if (title) {
-            // Dispatch a custom event for the React layer to handle
-            view.dom.dispatchEvent(
-              new CustomEvent('genten:open-wikilink', {
-                detail: { title },
-                bubbles: true,
-              })
-            )
-          }
-          e.preventDefault()
-        }
-      },
-    },
   }
 )

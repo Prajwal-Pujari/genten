@@ -14,15 +14,15 @@ interface Props {
   semanticThreshold: number
 }
 
-// Node colors defined by spec
+// Node colors defined by spec, matching light theme
 const TYPE_COLORS: Record<string, string> = {
-  study: '#5B8DD9',
-  problem: '#D4853A',
-  system_design: '#7B5CE7',
-  diagram: '#3A8A82',
-  canvas: '#C4626A',
-  daily: '#9B9590',
-  capture: '#C4BDB0',
+  study: '#4B7DD9',
+  problem: '#C4752A',
+  system_design: '#6B4CE7',
+  diagram: '#2A7A72',
+  canvas: '#B4525A',
+  daily: '#8B8580',
+  capture: '#6F6A62',
 }
 
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -51,8 +51,10 @@ export function GraphRenderer({ filter, semanticThreshold }: Props) {
     const width = containerRef.current.clientWidth
     const height = containerRef.current.clientHeight
 
-    // 1. Data Prep
-    const filteredNotes = notes.filter(n => {
+    const allGraphData = useNotesStore.getState().getGraphData()
+
+    // 1. Filter Nodes
+    const filteredGraphNodes = allGraphData.nodes.filter(n => {
       if (filter === 'All') return true
       if (filter === 'Study') return n.note_type === 'study'
       if (filter === 'Problems') return n.note_type === 'problem'
@@ -61,39 +63,29 @@ export function GraphRenderer({ filter, semanticThreshold }: Props) {
       return true
     })
 
-    const nodeIds = new Set(filteredNotes.map(n => n.id))
+    const nodeIds = new Set(filteredGraphNodes.map(n => n.id))
 
-    // Edges calculation (mocking semantic for now)
-    const links: GraphLink[] = []
-    
-    // Explicit links via markdown wikilinks
-    filteredNotes.forEach(note => {
-      const regex = /\[\[([^\]]+)\]\]/g
-      let match
-      while ((match = regex.exec(note.content)) !== null) {
-        const title = match[1]!.toLowerCase()
-        const targetNode = notes.find(n => n.title.toLowerCase() === title)
-        if (targetNode && nodeIds.has(targetNode.id)) {
-          links.push({
-            source: note.id,
-            target: targetNode.id,
-            type: 'explicit',
-          })
-        }
-      }
-    })
+    // 2. Filter Links
+    const links: GraphLink[] = allGraphData.links
+      .filter(l => nodeIds.has(l.source as string) && nodeIds.has(l.target as string))
+      .map(l => ({ 
+        ...l, 
+        source: l.source as string, 
+        target: l.target as string, 
+        type: l.link_type as 'explicit' | 'semantic' 
+      } as GraphLink))
 
-    // Node objects with size calculation: 6 + (link_count * 1.5), max 24
+    // Node objects with size calculation: smaller particle-like sizes
     const linkCounts: Record<string, number> = {}
     links.forEach(l => {
       linkCounts[l.source as string] = (linkCounts[l.source as string] || 0) + 1
       linkCounts[l.target as string] = (linkCounts[l.target as string] || 0) + 1
     })
 
-    const nodes: GraphNode[] = filteredNotes.map(note => ({
-      id: note.id,
-      note,
-      radius: Math.min(24, 6 + ((linkCounts[note.id] || 0) * 1.5)),
+    const nodes: GraphNode[] = filteredGraphNodes.map(gn => ({
+      id: gn.id,
+      note: notes.find(n => n.id === gn.id)!,
+      radius: Math.min(10, 3 + ((linkCounts[gn.id] || 0) * 0.8)),
     }))
 
     // 2. Setup SVG
@@ -151,15 +143,15 @@ export function GraphRenderer({ filter, semanticThreshold }: Props) {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', d => d.type === 'explicit' ? 'rgba(255,255,255,0.2)' : '#6B5CE7')
+      .attr('stroke', d => d.type === 'explicit' ? 'rgba(0,0,0,0.15)' : 'rgba(107,92,231,0.4)')
       .attr('stroke-width', 1.5)
       .attr('stroke-dasharray', d => d.type === 'semantic' ? '4,4' : 'none')
       .attr('opacity', d => d.type === 'semantic' ? (d.strength || 0.5) : 1)
 
-    // Tooltip div
+    // Tooltip div (Light Theme)
     const tooltip = d3.select(containerRef.current)
       .append('div')
-      .attr('class', 'absolute pointer-events-none opacity-0 bg-[#2D2522] text-[#F5F0E8] font-ui text-xs px-2 py-1 rounded shadow-modal transition-opacity z-50')
+      .attr('class', 'absolute pointer-events-none opacity-0 bg-white text-text-primary border border-border-subtle font-ui text-xs px-3 py-1.5 rounded shadow-sm transition-opacity z-50')
 
     // 5. Render Nodes
     const node = g.append('g')
@@ -168,24 +160,39 @@ export function GraphRenderer({ filter, semanticThreshold }: Props) {
       .join('circle')
       .attr('r', d => d.radius)
       .attr('fill', d => TYPE_COLORS[d.note.note_type] || TYPE_COLORS.capture!)
-      .attr('stroke', '#0F0D0B')
+      .attr('stroke', '#FFFFFF')
       .attr('stroke-width', 1.5)
       .style('cursor', 'pointer')
       .on('mouseover', function(event, d) {
-        d3.select(this).attr('stroke', '#F5F0E8').attr('stroke-width', 2)
+        d3.select(this).attr('stroke', '#0F0D0B').attr('stroke-width', 2)
         tooltip.transition().duration(200).style('opacity', 1)
-        tooltip.html((() => d.note.title || '') as any)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 10) + 'px')
+        
+        const tagsHtml = d.note.metadata.tags.length 
+          ? `<div class="mt-1.5 flex flex-wrap gap-1">${d.note.metadata.tags.map(t => `<span class="bg-black/5 border border-black/10 px-1 rounded text-[9px] text-text-secondary">${t}</span>`).join('')}</div>`
+          : ''
+
+        const detailsHtml = `
+          <div class="font-medium text-text-primary mb-1">${d.note.title || 'Untitled'}</div>
+          <div class="text-[10px] text-text-tertiary flex flex-col gap-0.5">
+            <span class="capitalize"><span class="font-medium">Type:</span> ${d.note.note_type.replace('_', ' ')}</span>
+            <span><span class="font-medium">Words:</span> ${d.note.word_count}</span>
+          </div>
+          ${tagsHtml}
+        `
+        
+        tooltip.html(detailsHtml)
+          .style('left', (event.pageX + 15) + 'px')
+          .style('top', (event.pageY - 15) + 'px')
       })
       .on('mouseout', function() {
-        d3.select(this).attr('stroke', '#0F0D0B').attr('stroke-width', 1.5)
+        d3.select(this).attr('stroke', '#FFFFFF').attr('stroke-width', 1.5)
         tooltip.transition().duration(200).style('opacity', 0)
       })
       .on('click', (_, d) => {
         // Open preview panel
         openNote(d.id)
         useUIStore.getState().setActiveEditorTab('links')
+        navigate('editor')
       })
       .call(d3.drag<any, any>()
         .on('start', (event, d) => {
@@ -204,6 +211,20 @@ export function GraphRenderer({ filter, semanticThreshold }: Props) {
         })
       )
 
+    // 5.5 Render Labels
+    const label = g.append('g')
+      .selectAll('text')
+      .data(nodes)
+      .join('text')
+      .text(d => d.note.title)
+      .attr('font-size', '10px')
+      .attr('font-family', 'Inter, system-ui, sans-serif')
+      .attr('fill', '#4A4540')
+      .attr('dx', d => d.radius + 4)
+      .attr('dy', 3)
+      .attr('pointer-events', 'none')
+      .attr('opacity', 0.85)
+
     // 6. Simulation Tick
     simulation.on('tick', () => {
       link
@@ -215,6 +236,10 @@ export function GraphRenderer({ filter, semanticThreshold }: Props) {
       node
         .attr('cx', d => d.x!)
         .attr('cy', d => d.y!)
+        
+      label
+        .attr('x', d => d.x!)
+        .attr('y', d => d.y!)
     })
 
     return () => {
@@ -223,5 +248,5 @@ export function GraphRenderer({ filter, semanticThreshold }: Props) {
     }
   }, [notes, filter, semanticThreshold, openNote, navigate, showContextMenu])
 
-  return <div ref={containerRef} className="w-full h-full" />
+  return <div ref={containerRef} className="w-full h-full bg-transparent" />
 }

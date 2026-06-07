@@ -210,11 +210,31 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   getLinkedNotes: (id) => {
     const note = get().notes.find(n => n.id === id)
     if (!note) return []
-    return get().notes.filter(n => note.metadata.links.includes(n.id))
+    
+    // Extract [[Title]] links from content
+    const regex = /\[\[([^\]]+)\]\]/g
+    const linkedTitles = new Set<string>()
+    let match
+    while ((match = regex.exec(note.content)) !== null) {
+      linkedTitles.add(match[1]!.toLowerCase())
+    }
+
+    return get().notes.filter(n => 
+      note.metadata.links.includes(n.id) || linkedTitles.has(n.title.toLowerCase())
+    )
   },
 
   getBacklinks: (id) => {
-    return get().notes.filter(n => n.metadata.links.includes(id))
+    const targetNote = get().notes.find(n => n.id === id)
+    if (!targetNote) return []
+    
+    const targetTitle = targetNote.title.toLowerCase()
+    const regex = new RegExp(`\\[\\[${targetTitle}\\]\\]`, 'i')
+
+    return get().notes.filter(n => {
+      if (n.id === id) return false
+      return n.metadata.links.includes(id) || regex.test(n.content)
+    })
   },
 
   getGraphData: () => {
@@ -226,17 +246,41 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       link_count: n.metadata.links.length,
     }))
 
-    const links = notes.flatMap(n =>
-      n.metadata.links
-        .filter(targetId => notes.some(t => t.id === targetId))
-        .map(targetId => ({
-          id: `${n.id}-${targetId}`,
-          source: n.id,
-          target: targetId,
-          link_type: 'explicit' as const,
-          strength: 1.0,
-        }))
-    )
+    // Also dynamically extract explicit links from content
+    const links = notes.flatMap(n => {
+      const explicitLinks: any[] = []
+      
+      // Frontmatter links
+      n.metadata.links.forEach(targetId => {
+        if (notes.some(t => t.id === targetId)) {
+          explicitLinks.push({
+            id: `${n.id}-${targetId}`,
+            source: n.id,
+            target: targetId,
+            link_type: 'explicit' as const,
+            strength: 1.0,
+          })
+        }
+      })
+
+      // Content wikilinks
+      const regex = /\[\[([^\]]+)\]\]/g
+      let match
+      while ((match = regex.exec(n.content)) !== null) {
+        const title = match[1]!.toLowerCase()
+        const targetNode = notes.find(t => t.title.toLowerCase() === title)
+        if (targetNode && !explicitLinks.some(l => l.target === targetNode.id)) {
+          explicitLinks.push({
+            id: `${n.id}-${targetNode.id}`,
+            source: n.id,
+            target: targetNode.id,
+            link_type: 'explicit' as const,
+            strength: 1.0,
+          })
+        }
+      }
+      return explicitLinks
+    })
 
     return { nodes, links }
   },
