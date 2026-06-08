@@ -1,181 +1,212 @@
 use axum::{
+    extract::{Query, State},
+    response::IntoResponse,
     routing::{get, post},
-    Router, Json, extract::{State, Query}, body::Bytes, http::StatusCode
+    Router,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use walkdir::WalkDir;
+use tokio::sync::Mutex;
+use std::fs;
 use std::path::PathBuf;
-use tower_http::cors::{CorsLayer, Any};
 use tauri::State as TauriState;
-use std::sync::Mutex;
+use tokio::sync::oneshot;
+
+#[derive(Default)]
+pub struct SyncServerState {
+    pub tx: Mutex<Option<oneshot::Sender<()>>>,
+}
 
 #[derive(Clone)]
-struct ServerState {
+struct AppState {
     vault_path: PathBuf,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct FileManifestEntry {
-    path: String,
-    modified: u64, // Unix timestamp
-}
-
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 struct FileQuery {
     path: String,
 }
 
-// Global handle to shutdown the server
-pub struct SyncServerHandle(pub Mutex<Option<tokio::sync::oneshot::Sender<()>>>);
+#[derive(serde::Serialize)]
+struct ManifestEntry {
+    path: String,
+    modified: u64,
+}
+
+async fn get_manifest(State(state): State<AppState>) -> impl IntoResponse {
+    let mut entries = Vec::new();
+    let base_path = &state.vault_path;
+    
+    if let Ok(walker) = walkdir::WalkDir::new(base_path).into_iter().collect::<Result<Vec<_>, _>>() {
+        for entry in walker {
+            let path = entry.path();
+            if path.is_file() {
+                let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+                if file_name == "genten.db" || file_name.ends_with("-journal") || file_name.ends_with("-wal") || file_name.starts_with(".") {
+                    continue;
+                }
+                
+                if let Ok(metadata) = entry.metadata() {
+                    if let Ok(modified) = metadata.modified() {
+                        let rel_path = path.strip_prefix(base_path).unwrap_or(path).to_string_lossy().replace("\\", "/");
+                        let secs = modified.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                        entries.push(ManifestEntry {
+                            path: rel_path.to_string(),
+                            modified: secs,
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    axum::Json(entries)
+}
+
+async fn download_file(
+    State(state): State<AppState>,
+    Query(query): Query<FileQuery>,
+) -> impl IntoResponse {
+    let full_path = state.vault_path.join(&query.path);
+    if let Ok(bytes) = fs::read(full_path) {
+        bytes
+    } else {
+        vec![]
+    }
+}
+
+async fn upload_file(
+    State(state): State<AppState>,
+    Query(query): Query<FileQuery>,
+    body: axum::body::Bytes,
+) -> impl IntoResponse {
+    let full_path = state.vault_path.join(&query.path);
+    if let Some(parent) = full_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(full_path, body);
+    "OK"
+}
 
 #[tauri::command]
 pub async fn start_sync_server(
     vault_path: String,
     port: u16,
-    handle: TauriState<'_, SyncServerHandle>
-) -> Result<String, String> {
-    // Stop existing server if any
-    stop_sync_server(handle.clone()).await?;
+    server_state: TauriState<'_, Arc<SyncServerState>>,
+) -> Result<(), String> {
+    let mut tx_lock = server_state.tx.lock().await;
+    
+    if tx_lock.is_some() {
+        return Ok(()); // Already running
+    }
 
-    let state = ServerState {
+    let (tx, rx) = oneshot::channel::<()>();
+    *tx_lock = Some(tx);
+    
+    let app_state = AppState {
         vault_path: PathBuf::from(vault_path),
     };
-
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
 
     let app = Router::new()
         .route("/manifest", get(get_manifest))
         .route("/download", get(download_file))
         .route("/upload", post(upload_file))
-        .layer(cors)
-        .with_state(Arc::new(state));
+        .with_state(app_state);
 
-    let addr = format!("0.0.0.0:{}", port);
-    let listener = tokio::net::TcpListener::bind(&addr).await.map_err(|e| e.to_string())?;
+    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
     
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    
-    {
-        let mut handle_lock = handle.0.lock().unwrap();
-        *handle_lock = Some(tx);
-    }
-
-    // Spawn server in background
-    tokio::spawn(async move {
-        let _ = axum::serve(listener, app)
-            .with_graceful_shutdown(async {
-                rx.await.ok();
-            })
-            .await;
+    tauri::async_runtime::spawn(async move {
+        if let Ok(listener) = tokio::net::TcpListener::bind(addr).await {
+            let _ = axum::serve(listener, app)
+                .with_graceful_shutdown(async {
+                    rx.await.ok();
+                })
+                .await;
+        }
     });
 
-    Ok(format!("Sync server started on port {}", port))
+    Ok(())
 }
 
 #[tauri::command]
-pub async fn stop_sync_server(handle: TauriState<'_, SyncServerHandle>) -> Result<(), String> {
-    let mut handle_lock = handle.0.lock().unwrap();
-    if let Some(tx) = handle_lock.take() {
+pub async fn stop_sync_server(
+    server_state: TauriState<'_, Arc<SyncServerState>>,
+) -> Result<(), String> {
+    let mut tx_lock = server_state.tx.lock().await;
+    if let Some(tx) = tx_lock.take() {
         let _ = tx.send(());
     }
     Ok(())
 }
 
-async fn get_manifest(State(state): State<Arc<ServerState>>) -> Result<Json<Vec<FileManifestEntry>>, (StatusCode, String)> {
-    let mut entries = Vec::new();
-    let walker = WalkDir::new(&state.vault_path).into_iter().filter_map(Result::ok);
-
-    for entry in walker {
-        if entry.file_type().is_file() {
-            let path_str = entry.path().to_string_lossy();
-            if path_str.ends_with(".md") || path_str.ends_with(".html") {
-                let metadata = std::fs::metadata(entry.path()).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                let modified = metadata.modified()
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs();
-
-                // Store relative path to make it platform-independent
-                let relative_path = entry.path().strip_prefix(&state.vault_path)
-                    .unwrap_or(entry.path())
-                    .to_string_lossy()
-                    .replace("\\", "/");
-
-                entries.push(FileManifestEntry {
-                    path: relative_path,
-                    modified,
-                });
-            }
-        }
-    }
-    Ok(Json(entries))
-}
-
-async fn download_file(
-    State(state): State<Arc<ServerState>>,
-    Query(query): Query<FileQuery>,
-) -> Result<String, (StatusCode, String)> {
-    let full_path = state.vault_path.join(&query.path);
-    std::fs::read_to_string(full_path).map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))
-}
-
-async fn upload_file(
-    State(state): State<Arc<ServerState>>,
-    Query(query): Query<FileQuery>,
-    body: Bytes,
-) -> Result<String, (StatusCode, String)> {
-    let full_path = state.vault_path.join(&query.path);
-    
-    if let Some(parent) = full_path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    }
-
-    std::fs::write(&full_path, body).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok("Uploaded".to_string())
+#[tauri::command]
+pub async fn fetch_remote_manifest(url: String) -> Result<Vec<serde_json::Value>, String> {
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(5)).build().unwrap();
+    let res = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    res.json::<Vec<serde_json::Value>>().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn get_local_manifest(vault_path: String) -> Result<Vec<FileManifestEntry>, String> {
+pub async fn fetch_remote_file(url: String) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(30)).build().unwrap();
+    let res = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    Ok(res.bytes().await.map_err(|e| e.to_string())?.to_vec())
+}
+
+#[tauri::command]
+pub async fn upload_remote_file(url: String, bytes: Vec<u8>) -> Result<(), String> {
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(30)).build().unwrap();
+    client.post(&url).body(bytes).send().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_local_manifest(vault_path: String) -> Result<Vec<serde_json::Value>, String> {
     let mut entries = Vec::new();
-    let walker = WalkDir::new(&vault_path).into_iter().filter_map(Result::ok);
-
-    for entry in walker {
-        if entry.file_type().is_file() {
-            let path_str = entry.path().to_string_lossy();
-            if path_str.ends_with(".md") || path_str.ends_with(".html") {
-                let metadata = std::fs::metadata(entry.path()).map_err(|e| e.to_string())?;
-                let modified = metadata.modified()
-                    .map_err(|e| e.to_string())?
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs();
-
-                let relative_path = entry.path().strip_prefix(&vault_path)
-                    .unwrap_or(entry.path())
-                    .to_string_lossy()
-                    .replace("\\", "/");
-
-                entries.push(FileManifestEntry {
-                    path: relative_path,
-                    modified,
-                });
+    let base_path = PathBuf::from(&vault_path);
+    
+    if let Ok(walker) = walkdir::WalkDir::new(&base_path).into_iter().collect::<Result<Vec<_>, _>>() {
+        for entry in walker {
+            let path = entry.path();
+            if path.is_file() {
+                let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+                if file_name == "genten.db" || file_name.ends_with("-journal") || file_name.ends_with("-wal") || file_name.starts_with(".") {
+                    continue;
+                }
+                
+                if let Ok(metadata) = entry.metadata() {
+                    if let Ok(modified) = metadata.modified() {
+                        let rel_path = path.strip_prefix(&base_path).unwrap_or(path).to_string_lossy().replace("\\", "/");
+                        let secs = modified.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                        entries.push(serde_json::json!({
+                            "path": rel_path,
+                            "modified": secs
+                        }));
+                    }
+                }
             }
         }
     }
+    
     Ok(entries)
 }
 
 #[tauri::command]
-pub async fn write_note_file_absolute(path: String, content: String) -> Result<(), String> {
-    let path = PathBuf::from(path);
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+pub fn write_note_file_absolute(path: String, content: String) -> Result<(), String> {
+    if let Some(parent) = PathBuf::from(&path).parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create dir {:?}: {}", parent, e))?;
     }
-    std::fs::write(path, content).map_err(|e| e.to_string())?;
-    Ok(())
+    fs::write(&path, content).map_err(|e| format!("Failed to write to {}: {}", path, e))
+}
+
+#[tauri::command]
+pub fn write_file_bytes_absolute(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    if let Some(parent) = PathBuf::from(&path).parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create dir {:?}: {}", parent, e))?;
+    }
+    fs::write(&path, bytes).map_err(|e| format!("Failed to write to {}: {}", path, e))
+}
+
+#[tauri::command]
+pub fn read_file_bytes_absolute(path: String) -> Result<Vec<u8>, String> {
+    fs::read(&path).map_err(|e| e.to_string())
 }

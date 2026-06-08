@@ -9,7 +9,7 @@ export function Titlebar() {
   const appWindow = getCurrentWindow()
 
   return (
-    <div className="h-[30px] w-full flex justify-between items-center bg-bg-base select-none fixed top-0 left-0 right-0 z-[100]">
+    <div className="hidden md:flex h-[30px] w-full justify-between items-center bg-bg-base select-none fixed top-0 left-0 right-0 z-[100]">
       {/* Title / Drag Area */}
       <div 
         data-tauri-drag-region 

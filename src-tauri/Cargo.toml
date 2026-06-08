@@ -1,6 +1,6 @@
 [package]
 name = "genten"
-version = "0.2.0"
+version = "0.1.0"
 description = "Genten — Personal Knowledge OS"
 authors = ["you"]
 edition = "2021"
@@ -17,7 +17,7 @@ postgres = ["tokio-postgres"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-opener = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-fs = "2"
@@ -30,11 +30,12 @@ sha2 = "0.10"
 walkdir = "2"
 notify = "7"
 tokio = { version = "1", features = ["full"] }
-axum = "0.7"
-tower-http = { version = "0.5", features = ["cors"] }
 log = "0.4"
 env_logger = "0.11"
 
 # Optional PostgreSQL support
 tokio-postgres = { version = "0.7", optional = true }
-base64 = "0.22.1"
+tauri-plugin-http = "2.5.9"
+axum = "0.8.9"
+tower-http = "0.6.11"
+reqwest = { version = "0.13.4", features = ["json"] }

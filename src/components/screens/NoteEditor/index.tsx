@@ -7,21 +7,24 @@ import { FileTree } from './FileTree'
 import { EditorArea } from './EditorArea'
 import { RightPanel } from './RightPanel'
 
+import { useNotesStore } from '../../../store/notesStore'
+
 export function NoteEditor() {
   const sidebarCollapsed = useUIStore(s => s.sidebarCollapsed)
   const focusMode = useUIStore(s => s.focusMode)
+  const activeNote = useNotesStore(s => s.activeNote)
 
   return (
     <div className="h-full flex flex-row w-full bg-bg-base overflow-hidden">
       {/* Left Panel: File Tree */}
       {(!sidebarCollapsed && !focusMode) && (
-        <div className="hidden md:flex flex-col w-[240px] border-r border-border-subtle flex-shrink-0 bg-surface-primary">
+        <div className={`${activeNote ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-[240px] border-r border-border-subtle flex-shrink-0 bg-surface-primary`}>
           <FileTree />
         </div>
       )}
 
       {/* Center Panel: Editor */}
-      <div className="flex-1 min-w-0 flex flex-col relative bg-bg-base">
+      <div className={`${!activeNote ? 'hidden md:flex' : 'flex'} flex-1 min-w-0 flex-col relative bg-bg-base`}>
         <EditorArea />
       </div>
 

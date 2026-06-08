@@ -23,6 +23,8 @@ export const gentenEditorTheme = EditorView.theme({
     caretColor: '#6B5CE7',
     padding: '0',
     fontFamily: "'Literata', Georgia, 'Times New Roman', serif",
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap',
   },
   '.cm-cursor, .cm-dropCursor': {
     borderLeftColor: '#6B5CE7',
@@ -42,6 +44,8 @@ export const gentenEditorTheme = EditorView.theme({
   },
   '.cm-line': {
     padding: '2px 0',
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap',
   },
   '&.cm-focused': {
     outline: 'none',
@@ -141,4 +145,5 @@ export const gentenHighlightStyle = HighlightStyle.define([
 export const gentenTheme = [
   gentenEditorTheme,
   syntaxHighlighting(gentenHighlightStyle),
+  EditorView.lineWrapping,
 ]

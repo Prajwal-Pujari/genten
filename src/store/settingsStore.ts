@@ -11,13 +11,14 @@ interface SettingsState {
   config: AppConfig
   isFirstLaunch: boolean
   isLoading: boolean
-  
+
+  // Backwards compatibility for previous local TARS implementation
   llmEndpoint: string
   llmModel: string
   llmCodeModel: string
   llmVisionModel: string
   focusModeDefault: boolean
-  
+
   // Actions
   loadConfig: () => Promise<void>
   completeSetup: (config: AppConfig) => Promise<void>
@@ -32,11 +33,11 @@ export const useSettingsStore = create<SettingsState>()(
       config: DEFAULT_CONFIG,
       isFirstLaunch: true,
       isLoading: true,
-      
+
       llmEndpoint: 'http://localhost:11434',
       llmModel: 'gemma4:26b',
-      llmCodeModel: 'deepseek-coder-v2:16b',
-      llmVisionModel: 'gemma4:26b',
+      llmCodeModel: 'qwen2.5-coder:7b',
+      llmVisionModel: 'llama3.2-vision:11b',
       focusModeDefault: false,
 
       loadConfig: async () => {
@@ -82,8 +83,6 @@ export const useSettingsStore = create<SettingsState>()(
               models: {
                 ...state.config.tars.models,
                 reasoning: model,
-                coding: codeModel,
-                vision: visionModel
               }
             } : null
           }

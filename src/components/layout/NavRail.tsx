@@ -8,6 +8,7 @@ import {
   GitBranch,
   Settings,
   Zap,
+  Plus,
 } from 'lucide-react'
 import { useUIStore, type ScreenId } from '../../store/uiStore'
 import { useConnectionStore } from '../../store/connectionStore'
@@ -30,6 +31,7 @@ export function NavRail() {
   const activeScreen = useUIStore(s => s.activeScreen)
   const navigate = useUIStore(s => s.navigate)
   const toggleTARS = useUIStore(s => s.toggleTARS)
+  const toggleNewNoteModal = useUIStore(s => s.toggleNewNoteModal)
   const connectionState = useConnectionStore(s => s.effectiveState)
   const effectiveState = connectionState()
 
@@ -38,9 +40,9 @@ export function NavRail() {
   return (
     <nav className="
       z-50
-      md:w-[52px] md:h-full md:border-r md:border-t-0 md:flex-col md:py-3
+      md:w-[52px] md:h-full md:border-r md:border-t-0 md:flex-col md:py-3 md:justify-start
       w-full h-[60px] border-t flex-row py-0
-      bg-surface-primary border-border-subtle flex items-center justify-between md:justify-start no-select flex-shrink-0
+      bg-surface-primary border-border-subtle flex items-center justify-around no-select flex-shrink-0
     ">
       {/* Logo - Hide on mobile */}
       <div className="hidden md:flex w-8 h-8 items-center justify-center mb-6">
@@ -51,7 +53,15 @@ export function NavRail() {
       </div>
 
       {/* Navigation items */}
-      <div className="flex md:flex-col items-center justify-center gap-4 md:gap-1 flex-1 md:flex-none w-full md:w-auto px-4 md:px-0">
+      <div className="flex flex-1 md:flex-none md:flex-col items-center justify-evenly md:justify-center w-full md:w-auto px-2 md:px-0 md:gap-1">
+        {/* Mobile New Note Button */}
+        <button
+          onClick={toggleNewNoteModal}
+          title="New Note"
+          className="md:hidden w-10 h-10 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-state cursor-pointer"
+        >
+          <Plus size={20} />
+        </button>
         {navItems.map(item => (
           <button
             key={item.id}
@@ -83,7 +93,7 @@ export function NavRail() {
       </div>
 
       {/* Bottom section — connection + settings */}
-      <div className="flex md:flex-col items-center gap-4 md:gap-3 px-4 md:px-0 mt-0 md:mt-auto">
+      <div className="flex md:flex-col items-center justify-center px-4 md:px-0 mt-0 md:mt-auto flex-shrink-0">
         {/* Connection status dot - hidden on mobile for space */}
         {effectiveState !== 'unconfigured' && (
           <div className="hidden md:flex items-center justify-center" title={`TARS: ${effectiveState}`}>

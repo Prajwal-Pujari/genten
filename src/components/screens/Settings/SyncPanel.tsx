@@ -8,7 +8,7 @@ export function SyncPanel() {
   
   // Host state (Desktop)
   const [isHosting, setIsHosting] = useState(false)
-  const [hostPort, setHostPort] = useState('1420')
+  const [hostPort, setHostPort] = useState('1425')
   const [localIp, setLocalIp] = useState('')
 
   // Client state (Mobile)
@@ -33,8 +33,6 @@ export function SyncPanel() {
       await invoke('start_sync_server', { vaultPath: config.vault_path, port: parseInt(hostPort) })
       setIsHosting(true)
       
-      // Attempt to get a local IP (could also just ask user to check their network)
-      // For UX, we just provide a placeholder to remind them.
       setLocalIp(`http://<YOUR_LAPTOP_IP>:${hostPort}`)
     } catch (e: any) {
       alert(`Failed to start server: ${e}`)
@@ -133,7 +131,7 @@ export function SyncPanel() {
                 type="text"
                 value={remoteHostUrl}
                 onChange={e => setRemoteHostUrl(e.target.value)}
-                placeholder="http://192.168.1.X:1420"
+                placeholder="http://192.168.1.X:1425"
                 className="w-full bg-surface border border-border-subtle rounded px-4 py-2 font-code text-sm text-text-primary focus:border-accent-violet focus:outline-none transition-colors"
               />
             </div>

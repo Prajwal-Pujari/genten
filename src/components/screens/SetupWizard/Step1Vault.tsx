@@ -16,7 +16,8 @@ interface Props {
 export function Step1Vault({ config, onUpdate, onNext }: Props) {
   const [error, setError] = useState('')
 
-  const defaultPath = `${getHomePath()}/Genten`
+  const isMobile = window.navigator.userAgent.includes('Mobile')
+  const defaultPath = isMobile ? '/data/user/0/com.genten.app/files/genten/Vault' : `${getHomePath()}/Genten`
 
   const handleBrowse = async () => {
     try {
@@ -93,8 +94,8 @@ export function Step1Vault({ config, onUpdate, onNext }: Props) {
 function getHomePath(): string {
   // In Tauri, we can't easily get the home dir synchronously.
   // Default to a reasonable path; the user can browse to change it.
-  if (navigator.platform.includes('Win')) {
-    return 'C:/Users/' + (navigator.userAgent.includes('Windows') ? 'User' : 'User')
+  if (navigator.platform.includes('Win') || navigator.userAgent.includes('Windows')) {
+    return 'C:/Users/User'
   }
-  return '~/Genten'
+  return '~'
 }

@@ -8,7 +8,7 @@ async function fileToBytes(file: File): Promise<number[]> {
 }
 
 // Handle file drop or paste
-async function handleImageFile(view: EditorView, file: File, pos: number) {
+export async function handleImageFile(view: EditorView, file: File, pos: number) {
   if (!file.type.startsWith('image/')) return false
 
   try {

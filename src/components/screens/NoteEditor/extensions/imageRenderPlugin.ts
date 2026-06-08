@@ -11,7 +11,7 @@ import {
   WidgetType,
 } from '@codemirror/view'
 
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../../../store/settingsStore'
 
 class ImageWidget extends WidgetType {
@@ -22,10 +22,17 @@ class ImageWidget extends WidgetType {
   toDOM(): HTMLElement {
     const container = document.createElement('div')
     container.className = 'cm-image-widget-container'
+    container.style.display = 'inline-block'
+    container.style.maxWidth = '100%'
+    container.style.overflow = 'hidden'
+    container.style.resize = 'both'
     
     const img = document.createElement('img')
     img.alt = this.alt
     img.className = 'cm-image-widget'
+    img.style.width = '100%'
+    img.style.height = '100%'
+    img.style.objectFit = 'contain'
     
     // Check if it's a web URL or data URI
     if (this.url.startsWith('http://') || this.url.startsWith('https://') || this.url.startsWith('data:')) {
@@ -37,32 +44,10 @@ class ImageWidget extends WidgetType {
       const vaultPath = config ? config.vault_path : null
       
       if (vaultPath) {
-        // Show a loading state
-        container.style.display = 'flex'
-        container.style.alignItems = 'center'
-        container.style.justifyContent = 'center'
-        container.style.backgroundColor = '#f0f0f0'
-        container.innerText = 'Loading...'
-        
-        invoke<string>('read_image_base64', { vaultPath, relativePath: this.url })
-          .then(b64 => {
-            const ext = this.url.split('.').pop()?.toLowerCase() || 'png'
-            let mime = 'image/png'
-            if (ext === 'jpg' || ext === 'jpeg') mime = 'image/jpeg'
-            else if (ext === 'gif') mime = 'image/gif'
-            else if (ext === 'webp') mime = 'image/webp'
-            else if (ext === 'svg') mime = 'image/svg+xml'
-            
-            img.src = `data:${mime};base64,${b64}`
-            container.innerText = '' // Clear loading text
-            container.style.display = 'inline-block'
-            container.appendChild(img)
-          })
-          .catch(err => {
-            console.error(err)
-            container.innerText = '❌ Failed to load image'
-            container.style.color = 'red'
-          })
+        // Strip leading slash from url if present
+        const relUrl = this.url.startsWith('/') ? this.url.slice(1) : this.url
+        img.src = convertFileSrc(`${vaultPath}/${relUrl}`)
+        container.appendChild(img)
       } else {
         container.innerText = '⚠️ Vault path not configured'
       }

@@ -39,13 +39,14 @@ interface UIStore {
   toggleQuickOpen: () => void
   toggleTARS: () => void
   toggleSettings: () => void
-  toggleNewNoteModal: () => void
   showContextMenu: (x: number, y: number, items: MenuItem[]) => void
   hideContextMenu: () => void
   setActiveEditorTab: (tab: 'links' | 'tars' | 'similar') => void
   setEditorMode: (mode: 'edit' | 'canvas' | 'split') => void
   toggleSidebar: () => void
+  setSidebarCollapsed: (val: boolean) => void
   toggleFocusMode: () => void
+  toggleNewNoteModal: () => void
   closeTopmost: () => boolean
 }
 
@@ -78,11 +79,6 @@ export const useUIStore = create<UIStore>((set, get) => ({
     contextMenu: null,
   })),
 
-  toggleNewNoteModal: () => set((s) => ({
-    newNoteModalVisible: !s.newNoteModalVisible,
-    contextMenu: null,
-  })),
-
   showContextMenu: (x, y, items) => set({ contextMenu: { x, y, items } }),
 
   hideContextMenu: () => set({ contextMenu: null }),
@@ -93,10 +89,18 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
 
+  setSidebarCollapsed: (val) => set({ sidebarCollapsed: val }),
+
   toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
+
+  toggleNewNoteModal: () => set((s) => ({
+    newNoteModalVisible: !s.newNoteModalVisible,
+    contextMenu: null,
+  })),
 
   closeTopmost: () => {
     const state = get()
+    // Priority: context menu → quick open → tars → settings
     if (state.contextMenu) {
       set({ contextMenu: null })
       return true

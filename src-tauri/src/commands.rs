@@ -57,11 +57,25 @@ fn dirs_next() -> Option<PathBuf> {
             .ok()
             .map(|p| PathBuf::from(p).join("genten"))
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
         std::env::var("HOME")
             .ok()
             .map(|p| PathBuf::from(p).join(".config").join("genten"))
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::env::var("HOME")
+            .ok()
+            .map(|p| PathBuf::from(p).join(".config").join("genten"))
+    }
+    #[cfg(target_os = "android")]
+    {
+        Some(PathBuf::from("/data/user/0/com.genten.app/files/genten"))
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux", target_os = "android")))]
+    {
+        None
     }
 }
 
@@ -124,48 +138,32 @@ pub fn rename_note_file(old_path: String, new_path: String) -> Result<(), String
 }
 
 #[tauri::command]
-pub fn save_attachment(vault_path: String, filename: String, bytes: Vec<u8>) -> Result<String, String> {
-    let base = Path::new(&vault_path);
-    let attachments_dir = base.join("Attachments").join("images");
-    if !attachments_dir.exists() {
-        fs::create_dir_all(&attachments_dir).map_err(|e| e.to_string())?;
-    }
-    
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    
-    let safe_filename = filename.replace(" ", "_");
-    let new_filename = format!("{}-{}", timestamp, safe_filename);
-    
-    let file_path = attachments_dir.join(&new_filename);
-    fs::write(&file_path, bytes).map_err(|e| format!("Failed to save image: {}", e))?;
-    
-    Ok(format!("./Attachments/images/{}", new_filename))
-}
-
-use base64::{Engine as _, engine::general_purpose};
-
-#[tauri::command]
-pub fn read_image_base64(vault_path: String, relative_path: String) -> Result<String, String> {
-    let base = Path::new(&vault_path);
-    // Remove leading "./" if present
-    let clean_path = relative_path.trim_start_matches("./");
-    let full_path = base.join(clean_path);
-    
-    let bytes = fs::read(&full_path).map_err(|e| format!("Failed to read image at {:?}: {}", full_path, e))?;
-    let b64 = general_purpose::STANDARD.encode(&bytes);
-    Ok(b64)
-}
-
-#[tauri::command]
 pub fn scan_vault(vault_path: String) -> Result<Vec<VaultEntry>, String> {
     let base = Path::new(&vault_path);
     if !base.exists() {
         return Ok(vec![]);
     }
     scan_directory(base, base).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn save_attachment(vault_path: String, filename: String, bytes: Vec<u8>) -> Result<String, String> {
+    let images_dir = PathBuf::from(&vault_path).join("Attachments").join("images");
+    fs::create_dir_all(&images_dir).map_err(|e| format!("Failed to create Attachments/images: {}", e))?;
+    
+    let mut file_path = images_dir.join(&filename);
+    if file_path.exists() {
+        let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+        let stem = Path::new(&filename).file_stem().unwrap().to_string_lossy();
+        let ext = Path::new(&filename).extension().unwrap_or_default().to_string_lossy();
+        let new_filename = format!("{}_{}.{}", stem, timestamp, ext);
+        file_path = images_dir.join(&new_filename);
+    }
+    
+    fs::write(&file_path, bytes).map_err(|e| format!("Failed to save image: {}", e))?;
+    
+    let rel_path = file_path.strip_prefix(Path::new(&vault_path)).unwrap_or(&file_path).to_string_lossy().replace("\\", "/");
+    Ok(rel_path)
 }
 
 fn scan_directory(path: &Path, base: &Path) -> Result<Vec<VaultEntry>, std::io::Error> {
@@ -234,10 +232,27 @@ fn load_config_internal() -> Result<AppConfig, Box<dyn std::error::Error>> {
     let config_path = get_config_path();
     if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;
-        let config: AppConfig = serde_json::from_str(&content)?;
+        let mut config: AppConfig = serde_json::from_str(&content)?;
+        
+        #[cfg(target_os = "android")]
+        {
+            if config.vault_path.is_empty() || config.vault_path.starts_with('~') || config.vault_path.starts_with("C:") {
+                if let Some(base) = dirs_next() {
+                    config.vault_path = base.join("Vault").to_string_lossy().to_string();
+                }
+            }
+        }
+        
         Ok(config)
     } else {
-        Ok(AppConfig::default())
+        let mut config = AppConfig::default();
+        #[cfg(target_os = "android")]
+        {
+            if let Some(base) = dirs_next() {
+                config.vault_path = base.join("Vault").to_string_lossy().to_string();
+            }
+        }
+        Ok(config)
     }
 }
 
