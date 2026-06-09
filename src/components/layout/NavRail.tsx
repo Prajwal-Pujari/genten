@@ -8,7 +8,6 @@ import {
   GitBranch,
   Settings,
   Zap,
-  Plus,
 } from 'lucide-react'
 import { useUIStore, type ScreenId } from '../../store/uiStore'
 import { useConnectionStore } from '../../store/connectionStore'
@@ -31,7 +30,6 @@ export function NavRail() {
   const activeScreen = useUIStore(s => s.activeScreen)
   const navigate = useUIStore(s => s.navigate)
   const toggleTARS = useUIStore(s => s.toggleTARS)
-  const toggleNewNoteModal = useUIStore(s => s.toggleNewNoteModal)
   const connectionState = useConnectionStore(s => s.effectiveState)
   const effectiveState = connectionState()
 
@@ -54,14 +52,6 @@ export function NavRail() {
 
       {/* Navigation items */}
       <div className="flex flex-1 md:flex-none md:flex-col items-center justify-evenly md:justify-center w-full md:w-auto px-2 md:px-0 md:gap-1">
-        {/* Mobile New Note Button */}
-        <button
-          onClick={toggleNewNoteModal}
-          title="New Note"
-          className="md:hidden w-10 h-10 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-state cursor-pointer"
-        >
-          <Plus size={20} />
-        </button>
         {navItems.map(item => (
           <button
             key={item.id}

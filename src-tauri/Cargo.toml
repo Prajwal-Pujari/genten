@@ -1,6 +1,6 @@
 [package]
 name = "genten"
-version = "0.1.0"
+version = "0.3.32"
 description = "Genten — Personal Knowledge OS"
 authors = ["you"]
 edition = "2021"
@@ -38,4 +38,4 @@ tokio-postgres = { version = "0.7", optional = true }
 tauri-plugin-http = "2.5.9"
 axum = "0.8.9"
 tower-http = "0.6.11"
-reqwest = { version = "0.13.4", features = ["json"] }
+reqwest = { version = "0.13.4", features = ["json", "stream"] }

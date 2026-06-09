@@ -40,8 +40,8 @@ export function useKeyboard() {
         return
       }
 
-      // Block shortcuts when inside input elements
-      if (isInputFocused()) return
+      // Block single-key shortcuts when inside input elements, but allow Meta/Ctrl commands
+      if (isInputFocused() && !meta) return
 
       if (meta && e.key === 'k') {
         e.preventDefault()

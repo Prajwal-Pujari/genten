@@ -121,8 +121,8 @@ export const gentenHighlightStyle = HighlightStyle.define([
   { tag: tags.link, color: '#6B5CE7', textDecoration: 'none' },
   { tag: tags.url, color: '#6B5CE7', textDecoration: 'underline' },
 
-  // Quotes
-  { tag: tags.quote, color: '#6B6560', fontStyle: 'italic', borderLeft: '3px solid #C4BDB0' },
+  // Quotes (used for TARS output highlight)
+  { tag: tags.quote, color: '#2D2522', fontStyle: 'normal', backgroundColor: 'rgba(107, 92, 231, 0.08)', borderLeft: '3px solid #6B5CE7', paddingLeft: '8px', paddingRight: '4px', borderRadius: '2px' },
 
   // Lists
   { tag: tags.list, color: '#1A1714' },

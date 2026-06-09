@@ -227,11 +227,22 @@
   border-bottom-color: #6B5CE7;
 }
 
-/* ── TARS Inline Trigger ─────────────────────────────────────── */
+/* ── TARS Inline Trigger & Animation ───────────────────────────── */
 
 .cm-tars-trigger {
   color: #6B5CE7;
   font-weight: 500;
+}
+
+.tars-blinking-cursor {
+  display: inline-block;
+  animation: tars-blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+@keyframes tars-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 /* ── Inline Image Widget ─────────────────────────────────────── */

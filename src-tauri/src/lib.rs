@@ -5,6 +5,7 @@ mod vault;
 mod watcher;
 mod sync;
 mod sync_server;
+mod llm;
 use sync_server::*;
 
 #[cfg(feature = "postgres")]
@@ -44,6 +45,9 @@ pub fn run() {
             write_file_bytes_absolute,
             read_file_bytes_absolute,
             save_attachment,
+            llm::test_ollama_connection,
+            llm::analyze_vision_image,
+            llm::generate_ollama_chat
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

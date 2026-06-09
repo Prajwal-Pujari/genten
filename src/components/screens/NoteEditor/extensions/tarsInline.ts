@@ -1,5 +1,6 @@
 import { StateField, StateEffect } from '@codemirror/state'
-import { Decoration, DecorationSet, EditorView, WidgetType } from '@codemirror/view'
+import { Decoration, DecorationSet, EditorView, WidgetType, keymap } from '@codemirror/view'
+import { chatWithTARS } from '../../../../lib/tars/ollama'
 
 export const insertTarsInline = StateEffect.define<{ pos: number, text: string }>()
 export const clearTarsInline = StateEffect.define<void>()
@@ -22,7 +23,16 @@ class TarsStreamingWidget extends WidgetType {
     span.style.wordBreak = 'break-word'
     span.style.whiteSpace = 'pre-wrap'
     span.style.boxShadow = '0 0 8px rgba(107, 92, 231, 0.3)'
-    span.innerText = this.text || 'TARS is thinking...'
+    
+    if (!this.text) {
+      span.innerHTML = '<span class="tars-blinking-cursor">|</span>'
+    } else {
+      span.innerText = this.text
+      const cursor = document.createElement('span')
+      cursor.className = 'tars-blinking-cursor'
+      cursor.innerText = '|'
+      span.appendChild(cursor)
+    }
     
     return span
   }
@@ -51,4 +61,58 @@ export const tarsInlineField = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f)
 })
 
-export const tarsInlinePlugin = [tarsInlineField]
+export const tarsInlineKeymap = keymap.of([
+  {
+    key: 'Enter',
+    run: (view) => {
+      const pos = view.state.selection.main.head
+      const line = view.state.doc.lineAt(pos)
+      const text = line.text
+
+      if (text.trim().startsWith('@tars')) {
+        const prompt = text.replace('@tars', '').trim()
+        
+        // Keep the full line including @tars, and add newlines for the response
+        view.dispatch({
+          changes: { from: line.from, to: line.to, insert: text + '\n\n' }
+        })
+        
+        const outputLineFrom = line.from + text.length + 2
+        
+        // Show initial thinking widget
+        view.dispatch({
+          effects: insertTarsInline.of({ pos: outputLineFrom, text: '' })
+        })
+
+        let currentText = ''
+        
+        chatWithTARS([{ role: 'user', content: prompt }], (chunk) => {
+          currentText += chunk
+          // Update the streaming widget
+          view.dispatch({
+            effects: insertTarsInline.of({ pos: outputLineFrom, text: currentText })
+          })
+        }).then(() => {
+          view.dispatch({ effects: clearTarsInline.of() })
+          
+          const formattedText = currentText.trim() + '\n\n'
+          
+          view.dispatch({
+            changes: { from: outputLineFrom, insert: formattedText },
+            selection: { anchor: outputLineFrom + formattedText.length }
+          })
+        }).catch(err => {
+          view.dispatch({ effects: clearTarsInline.of() })
+          view.dispatch({
+            changes: { from: outputLineFrom, insert: `❌ Error: ${err.message}\n` }
+          })
+        })
+        
+        return true
+      }
+      return false
+    }
+  }
+])
+
+export const tarsInlinePlugin = [tarsInlineField, tarsInlineKeymap]

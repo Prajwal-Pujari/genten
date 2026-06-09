@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { useNotesStore } from '../../store/notesStore'
+import { useSettingsStore } from '../../store/settingsStore'
 
 export interface SyncProgress {
   status: 'idle' | 'syncing' | 'error' | 'success'
@@ -115,8 +116,7 @@ export async function runSync(hostUrl: string, onProgress: (p: Partial<SyncProgr
 
     // 7. Refresh Store
     onProgress({ currentAction: 'Refreshing UI...' })
-    const { completeSetup } = await import('../../store/settingsStore').then(m => m.useSettingsStore.getState())
-    completeSetup(config)
+    useSettingsStore.getState().completeSetup(config)
     await useNotesStore.getState().loadVault()
 
     onProgress({ status: 'success', currentAction: 'Sync Complete' })

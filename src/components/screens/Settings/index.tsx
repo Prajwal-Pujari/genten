@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSettingsStore } from '../../../store/settingsStore'
+import { fetch } from '@tauri-apps/plugin-http'
 import { Server, Cpu, Database, CheckCircle2, AlertCircle } from 'lucide-react'
 import { SyncPanel } from './SyncPanel'
 
@@ -15,6 +16,7 @@ export function SettingsScreen() {
   const [codeModel, setCodeModel] = useState(settings.llmCodeModel)
   const [visionModel, setVisionModel] = useState(settings.llmVisionModel)
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+  const [testError, setTestError] = useState<string>('')
   
   const [availableModels, setAvailableModels] = useState<string[]>([])
 
@@ -44,17 +46,19 @@ export function SettingsScreen() {
 
   const testConnection = async () => {
     setTestStatus('testing')
+    setTestError('')
     try {
-      const url = new URL('/api/tags', endpoint).toString()
-      const res = await fetch(url)
-      if (res.ok) {
+      const { success, error } = await settings.testConnection(endpoint)
+      if (success) {
         setTestStatus('success')
         handleSave() // Save if successful
       } else {
         setTestStatus('error')
+        setTestError(error || 'Unknown error')
       }
-    } catch (e) {
+    } catch (e: any) {
       setTestStatus('error')
+      setTestError(e.message || String(e))
     }
   }
 
@@ -167,7 +171,7 @@ export function SettingsScreen() {
                 )}
                 {testStatus === 'error' && (
                   <span className="flex items-center gap-1.5 text-accent-red font-ui text-sm">
-                    <AlertCircle size={16} /> Connection failed
+                    <AlertCircle size={16} /> Connection failed: {testError}
                   </span>
                 )}
               </div>
