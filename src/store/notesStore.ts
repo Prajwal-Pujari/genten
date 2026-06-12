@@ -343,8 +343,8 @@ function parseNoteFromFile(filePath: string, content: string): Note | null {
 }
 
 function parseMdNote(filePath: string, raw: string): Note | null {
-  // Parse YAML frontmatter
-  const fmMatch = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
+  // Parse YAML frontmatter handling both LF and CRLF
+  const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/)
   if (!fmMatch) {
     // No frontmatter — create basic note
     const title = filePath.split('/').pop()?.replace('.md', '') ?? 'Untitled'
