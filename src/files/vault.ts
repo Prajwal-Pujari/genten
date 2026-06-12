@@ -2,7 +2,7 @@
 // Genten — Vault File Operations
 // ═══════════════════════════════════════════════════════════════
 
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '../lib/apiAdapter'
 
 export interface VaultEntry {
   name: string

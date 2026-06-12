@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '../apiAdapter'
 import { useNotesStore } from '../../store/notesStore'
 import { useSettingsStore } from '../../store/settingsStore'
 

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { create } from 'zustand'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '../lib/apiAdapter'
 import { v4 as uuidv4 } from 'uuid'
 import type { Note, NoteType, NoteMetadata } from '../types/note'
 import { NOTE_TYPE_INFO } from '../types/note'

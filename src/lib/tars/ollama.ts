@@ -4,7 +4,7 @@
 
 import { useSettingsStore } from '../../store/settingsStore'
 import { routePrompt } from './router'
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../apiAdapter';
 import { listen } from '@tauri-apps/api/event';
 
 export interface ChatMessage {

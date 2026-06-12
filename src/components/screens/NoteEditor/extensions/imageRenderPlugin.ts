@@ -13,6 +13,7 @@ import {
 
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../../../store/settingsStore'
+import { isWebMode } from '../../../../lib/apiAdapter'
 
 class ImageWidget extends WidgetType {
   constructor(readonly url: string, readonly alt: string) {
@@ -78,7 +79,11 @@ class ImageWidget extends WidgetType {
       if (vaultPath) {
         // Strip leading slash from url if present
         const relUrl = this.url.startsWith('/') ? this.url.slice(1) : this.url
-        img.src = convertFileSrc(`${vaultPath}/${relUrl}`)
+        if (isWebMode) {
+          img.src = `http://127.0.0.1:8000/api/asset?path=${encodeURIComponent(vaultPath + '/' + relUrl)}`
+        } else {
+          img.src = convertFileSrc(`${vaultPath}/${relUrl}`)
+        }
         container.appendChild(img)
       } else {
         container.innerText = '⚠️ Vault path not configured'

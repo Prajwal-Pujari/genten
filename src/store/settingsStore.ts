@@ -4,7 +4,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '../lib/apiAdapter'
 import type { AppConfig } from '../types/settings'
 import { DEFAULT_CONFIG } from '../types/settings'
 

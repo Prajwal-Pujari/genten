@@ -15,7 +15,7 @@ import {
 
 import { open } from '@tauri-apps/plugin-dialog'
 import { readFile } from '@tauri-apps/plugin-fs'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '../../../lib/apiAdapter'
 import { useSettingsStore } from '../../../store/settingsStore'
 
 interface EditorToolbarProps {

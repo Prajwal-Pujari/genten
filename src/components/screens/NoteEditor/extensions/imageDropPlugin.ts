@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '../../../../lib/apiAdapter'
 
 // Helper to convert File to an array of bytes for Rust
 async function fileToBytes(file: File): Promise<number[]> {

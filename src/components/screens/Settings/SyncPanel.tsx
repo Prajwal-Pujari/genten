@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Smartphone, RefreshCw, Server as ServerIcon, QrCode } from 'lucide-react'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '../../../lib/apiAdapter'
 import { runSync, SyncProgress } from '../../../lib/sync/syncEngine'
 
 export function SyncPanel() {
