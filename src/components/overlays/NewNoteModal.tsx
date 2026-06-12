@@ -3,7 +3,6 @@ import { FilePlus2, X } from 'lucide-react'
 import { useUIStore } from '../../store/uiStore'
 import { useNotesStore } from '../../store/notesStore'
 import type { NoteType } from '../../types/note'
-import { NOTE_TYPE_INFO } from '../../types/note'
 
 export function NewNoteModal() {
   const visible = useUIStore(s => s.newNoteModalVisible)
@@ -39,17 +38,6 @@ export function NewNoteModal() {
       else navigate('editor')
     }
   }
-
-  const types: { id: NoteType, label: string }[] = [
-    { id: 'capture', label: 'Quick Capture' },
-    { id: 'study', label: 'Study Note' },
-    { id: 'problem', label: 'Problem Solving' },
-    { id: 'system_design', label: 'System Design' },
-    { id: 'diagram', label: 'Diagram' },
-    { id: 'canvas', label: 'Canvas' },
-    { id: 'daily', label: 'Daily Note' },
-    { id: 'expense', label: 'Expense Tracker' },
-  ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
