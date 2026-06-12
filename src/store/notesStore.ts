@@ -400,6 +400,7 @@ function parseMdNote(filePath: string, raw: string): Note | null {
     metadata: {
       subject: fm['subject'] || undefined,
       topic: fm['topic'] || undefined,
+      project: fm['project'] || undefined,
       tags,
       links,
       difficulty: fm['difficulty'] as 'easy' | 'medium' | 'hard' | undefined,

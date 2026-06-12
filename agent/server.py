@@ -214,6 +214,14 @@ async def handle_invoke(req: InvokeRequest):
             
         return {"status": "ok"}
 
+    elif cmd == "get_tars_goal":
+        vault_path = os.path.expanduser(config.get("vaultPath", ""))
+        goal_file = os.path.join(vault_path, TARS_GOAL_FILE)
+        if not os.path.exists(goal_file):
+            return None
+        with open(goal_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+
     elif cmd == "launch_tars_goal":
         vault_path = os.path.expanduser(config.get("vaultPath", ""))
         goal_file = os.path.join(vault_path, TARS_GOAL_FILE)

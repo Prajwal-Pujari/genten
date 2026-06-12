@@ -33,6 +33,7 @@ export interface NoteMetadata {
   source?: string
   tags: string[]
   links: string[]               // UUIDs of explicitly linked notes
+  project?: string              // The TARS project this note belongs to
   // Problem-specific
   difficulty?: 'easy' | 'medium' | 'hard'
   status?: 'attempted' | 'solved' | 'mastered'

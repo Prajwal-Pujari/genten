@@ -33,7 +33,8 @@ export function NavRail() {
   const connectionState = useConnectionStore(s => s.effectiveState)
   const effectiveState = connectionState()
 
-  const showTARSButton = effectiveState !== 'unconfigured'
+  // Always show TARS button now that it's a backend multi-agent system
+  const showTARSButton = true
 
   return (
     <nav className="
