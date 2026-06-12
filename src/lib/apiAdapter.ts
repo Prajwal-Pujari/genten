@@ -4,7 +4,9 @@ import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 // tauri uses window.__TAURI_INTERNALS__ in v2, or just fallback if invoke throws an error
 export const isWebMode = !window.hasOwnProperty('__TAURI_INTERNALS__');
 
-const WEB_API_URL = 'http://127.0.0.1:8000/api';
+const WEB_API_URL = typeof window !== 'undefined' && isWebMode 
+  ? `${window.location.protocol}//${window.location.host}/api`
+  : 'http://127.0.0.1:8000/api';
 
 export async function invoke<T>(cmd: string, args: Record<string, any> = {}): Promise<T> {
   if (!isWebMode) {

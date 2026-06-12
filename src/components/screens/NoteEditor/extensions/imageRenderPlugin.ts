@@ -80,7 +80,8 @@ class ImageWidget extends WidgetType {
         // Strip leading slash from url if present
         const relUrl = this.url.startsWith('/') ? this.url.slice(1) : this.url
         if (isWebMode) {
-          img.src = `http://127.0.0.1:8000/api/asset?path=${encodeURIComponent(vaultPath + '/' + relUrl)}`
+          const baseUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}` : 'http://127.0.0.1:8000'
+          img.src = `${baseUrl}/api/asset?path=${encodeURIComponent(vaultPath + '/' + relUrl)}`
         } else {
           img.src = convertFileSrc(`${vaultPath}/${relUrl}`)
         }
