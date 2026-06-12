@@ -87,11 +87,12 @@ def generate_curiosity(recent_notes) -> str:
     print("[AGENT] Generating new curiosity...")
     context_str = "\n".join([f"- {n['title']} (ID: {n['id']})" for n in recent_notes])
     
-    prompt = f"""You are an autonomous AI researcher maintaining a personal knowledge graph.
+    prompt = f"""You are an elite, autonomous AI researcher maintaining a complex personal knowledge graph.
 Here are the titles of your most recent thoughts and captures:
 {context_str}
 
-Based on the above, or completely out of the blue, what is a fascinating technical, programming, or philosophical question you should explore next? 
+Based on the above context, or a completely new domain of computer science, what is the most profound, complex, and highly technical engineering or philosophical problem you can explore next? 
+Your question must be highly specific, advanced, and thought-provoking. Avoid basic or generic topics.
 Respond ONLY with the question or topic to explore. Do not add any conversational filler."""
 
     topic = query_ollama(THINKER_MODEL, prompt)
