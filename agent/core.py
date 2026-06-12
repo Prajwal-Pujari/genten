@@ -138,14 +138,14 @@ Return ONLY a comma-separated list of the relevant note IDs. If none are relevan
     if "NONE" in response.upper():
         return []
         
-    # Extract IDs
-    found_ids = []
+    # Extract note objects
+    found_notes = []
     for n in recent_notes:
         if n['id'] in response:
-            found_ids.append(n['id'])
+            found_notes.append(n)
             
-    print(f"  -> Linked to {len(found_ids)} existing notes.")
-    return found_ids
+    print(f"  -> Linked to {len(found_notes)} existing notes.")
+    return found_notes
 
 def create_note_file(topic: str, content: str, links: list, model_used: str):
     slug = topic.lower().replace(" ", "_")
@@ -155,8 +155,14 @@ def create_note_file(topic: str, content: str, links: list, model_used: str):
     now = datetime.utcnow().isoformat() + "Z"
     note_id = str(uuid.uuid4())
     
-    links_str = "[" + ", ".join([f'"{lid}"' for lid in links]) + "]"
+    links_str = "[" + ", ".join([f'"{n["id"]}"' for n in links]) + "]"
     
+    # Append visual links to the content so they appear in the UI
+    if links:
+        content += "\n\n## Related Thoughts\n"
+        for n in links:
+            content += f"- [[{n['title']}]]\n"
+            
     markdown = f"""---
 id: {note_id}
 title: {topic.replace(':', '-')}
