@@ -17,6 +17,7 @@ export function Step1Vault({ config, onUpdate, onNext }: Props) {
   const [error, setError] = useState('')
 
   const isMobile = window.navigator.userAgent.includes('Mobile')
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
   const defaultPath = isMobile ? '/data/user/0/com.genten.app/files/genten/Vault' : `${getHomePath()}/Genten`
 
   const handleBrowse = async () => {
@@ -49,24 +50,36 @@ export function Step1Vault({ config, onUpdate, onNext }: Props) {
         This is where all your notes will live as files.
       </p>
 
-      {/* Path display */}
+      {/* Path display & Input */}
       <div className="flex items-center gap-2 mb-4">
         <div className="flex-1 flex items-center gap-3 bg-surface border border-border-subtle rounded-lg px-4 py-3">
           <FolderOpen size={16} className="text-text-tertiary flex-shrink-0" />
-          <span className="font-code text-sm text-text-primary truncate">
-            {config.vault_path || defaultPath}
-          </span>
+          {isTauri ? (
+            <span className="font-code text-sm text-text-primary truncate">
+              {config.vault_path || defaultPath}
+            </span>
+          ) : (
+            <input
+              type="text"
+              className="flex-1 bg-transparent border-none outline-none font-code text-sm text-text-primary"
+              value={config.vault_path || defaultPath}
+              onChange={(e) => onUpdate({ vault_path: e.target.value })}
+              placeholder="e.g. /home/user/genten_vault or ./vault"
+            />
+          )}
         </div>
       </div>
 
       {/* Action buttons */}
       <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={handleBrowse}
-          className="px-4 py-2 bg-surface-elevated border border-border-subtle rounded-lg font-ui text-sm text-text-primary hover:bg-surface-highest transition-state cursor-pointer"
-        >
-          Browse…
-        </button>
+        {isTauri && (
+          <button
+            onClick={handleBrowse}
+            className="px-4 py-2 bg-surface-elevated border border-border-subtle rounded-lg font-ui text-sm text-text-primary hover:bg-surface-highest transition-state cursor-pointer"
+          >
+            Browse…
+          </button>
+        )}
         <button
           onClick={handleUseDefault}
           className="px-4 py-2 font-ui text-sm text-text-secondary hover:text-accent-violet transition-state cursor-pointer"

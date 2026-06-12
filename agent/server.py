@@ -83,18 +83,18 @@ async def handle_invoke(req: InvokeRequest):
         return load_config()
         
     elif cmd == "scan_vault":
-        vault_path = args.get("vaultPath")
+        vault_path = os.path.expanduser(args.get("vaultPath", ""))
         if not vault_path or not os.path.exists(vault_path):
             return []
         return scan_directory(vault_path, vault_path)
         
     elif cmd == "read_note_file":
-        path = args.get("path")
+        path = os.path.expanduser(args.get("path", ""))
         with open(path, 'r', encoding='utf-8') as f:
             return f.read()
             
     elif cmd == "write_note_file":
-        path = args.get("path")
+        path = os.path.expanduser(args.get("path", ""))
         content = args.get("content", "")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w', encoding='utf-8') as f:
@@ -102,7 +102,7 @@ async def handle_invoke(req: InvokeRequest):
         return None
         
     elif cmd == "delete_note_file":
-        path = args.get("path")
+        path = os.path.expanduser(args.get("path", ""))
         if os.path.exists(path):
             os.remove(path)
         return None
