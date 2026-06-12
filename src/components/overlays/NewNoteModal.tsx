@@ -91,23 +91,6 @@ export function NewNoteModal() {
             />
           </div>
 
-          <div>
-            <label className="block font-ui text-xs uppercase tracking-wider text-text-secondary mb-2">
-              Note Type / Folder
-            </label>
-            <select
-              value={type}
-              onChange={e => setType(e.target.value as NoteType)}
-              className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 font-ui text-sm text-text-primary focus:border-accent-violet focus:outline-none transition-colors"
-            >
-              {types.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.label} (→ /{NOTE_TYPE_INFO[t.id].folder})
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
