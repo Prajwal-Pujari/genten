@@ -19,6 +19,7 @@ interface NotesStore {
 
   // Actions
   loadVault: () => Promise<void>
+  listenForLiveUpdates: () => void
   openNote: (id: string) => Promise<void>
   saveNote: (note: Partial<Note> & { id: string }) => Promise<void>
   createNote: (type: NoteType, title: string) => Promise<Note>
@@ -89,6 +90,45 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     } catch (err) {
       console.error('[Notes] Failed to load vault:', err)
     }
+  },
+
+  listenForLiveUpdates: () => {
+    const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+    if (isTauri) return; // Desktop app uses other methods or doesn't need this
+    
+    // Prevent multiple connections
+    if ((window as any).__SSE_CONNECTED) return;
+    (window as any).__SSE_CONNECTED = true;
+    
+    console.log('[Notes] Starting SSE live sync...');
+    const source = new EventSource('http://127.0.0.1:8000/api/events');
+    source.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'FILE_CHANGED' && data.path) {
+          const content = await invoke<string>('read_note_file', { path: data.path });
+          const note = parseNoteFromFile(data.path, content);
+          if (note) {
+            set((state) => {
+              const idx = state.notes.findIndex(n => n.id === note.id);
+              if (idx !== -1) {
+                const newNotes = [...state.notes];
+                newNotes[idx] = note;
+                return { notes: newNotes };
+              } else {
+                return { notes: [...state.notes, note] };
+              }
+            });
+          }
+        } else if (data.type === 'FILE_DELETED' && data.path) {
+          set((state) => ({
+            notes: state.notes.filter(n => n.file_path !== data.path)
+          }));
+        }
+      } catch (err) {
+        // Ignore JSON parse errors or network drops
+      }
+    };
   },
 
   openNote: async (id) => {

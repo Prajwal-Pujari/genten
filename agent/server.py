@@ -5,6 +5,10 @@ from typing import Any, Dict, List, Optional
 import uuid
 import httpx
 from datetime import datetime
+import asyncio
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +16,61 @@ from fastapi.responses import FileResponse, StreamingResponse, Response
 from pydantic import BaseModel
 
 app = FastAPI(title="Genten Agent Brain")
+
+# ---------------------------------------------------------
+# REAL-TIME SYNC (SSE & WATCHDOG)
+# ---------------------------------------------------------
+sse_clients = set()
+vault_observer = None
+
+def broadcast_sse(event_data: str):
+    for q in list(sse_clients):
+        try:
+            q.put_nowait(event_data)
+        except Exception:
+            pass
+
+class VaultEventHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.endswith('.md'):
+            broadcast_sse(json.dumps({"type": "FILE_CHANGED", "path": event.src_path}))
+    def on_modified(self, event):
+        if not event.is_directory and event.src_path.endswith('.md'):
+            broadcast_sse(json.dumps({"type": "FILE_CHANGED", "path": event.src_path}))
+    def on_deleted(self, event):
+        if not event.is_directory and event.src_path.endswith('.md'):
+            broadcast_sse(json.dumps({"type": "FILE_DELETED", "path": event.src_path}))
+
+def ensure_observer_running():
+    global vault_observer
+    vault_path = os.path.expanduser(load_config().get("vault_path", ""))
+    if not vault_path or not os.path.exists(vault_path):
+        return
+        
+    if vault_observer is None:
+        event_handler = VaultEventHandler()
+        vault_observer = Observer()
+        vault_observer.schedule(event_handler, vault_path, recursive=True)
+        vault_observer.start()
+        print(f"Started file observer on {vault_path}")
+
+@app.get("/api/events")
+async def sse_events(request: Request):
+    ensure_observer_running()
+    q = asyncio.Queue()
+    sse_clients.add(q)
+    async def event_generator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                data = await q.get()
+                yield f"data: {data}\n\n"
+        finally:
+            sse_clients.discard(q)
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 
 app.add_middleware(
     CORSMiddleware,

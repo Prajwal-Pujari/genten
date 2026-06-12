@@ -27,6 +27,7 @@ export default function App() {
   const activeScreen = useUIStore(s => s.activeScreen)
   const focusMode = useUIStore(s => s.focusMode)
   const loadVault = useNotesStore(s => s.loadVault)
+  const listenForLiveUpdates = useNotesStore(s => s.listenForLiveUpdates)
 
   // Initialize app
   useEffect(() => {
@@ -46,8 +47,9 @@ export default function App() {
         navigate('home')
       }
       loadVault()
+      listenForLiveUpdates()
     }
-  }, [isFirstLaunch, isLoading, navigate, activeScreen, loadVault])
+  }, [isFirstLaunch, isLoading, navigate, activeScreen, loadVault, listenForLiveUpdates])
 
   // Listen for sync completions from mobile devices
   useEffect(() => {
