@@ -44,6 +44,8 @@ pub fn run() {
             write_note_file_absolute,
             write_file_bytes_absolute,
             read_file_bytes_absolute,
+            download_remote_file_to_disk,
+            upload_local_file_to_remote,
             save_attachment,
             llm::test_ollama_connection,
             llm::analyze_vision_image,

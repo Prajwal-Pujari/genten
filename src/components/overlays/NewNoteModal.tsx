@@ -48,6 +48,7 @@ export function NewNoteModal() {
     { id: 'diagram', label: 'Diagram' },
     { id: 'canvas', label: 'Canvas' },
     { id: 'daily', label: 'Daily Note' },
+    { id: 'expense', label: 'Expense Tracker' },
   ]
 
   return (

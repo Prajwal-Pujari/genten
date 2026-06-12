@@ -1,6 +1,68 @@
 import { StateField, StateEffect } from '@codemirror/state'
 import { Decoration, DecorationSet, EditorView, WidgetType, keymap } from '@codemirror/view'
 import { chatWithTARS } from '../../../../lib/tars/ollama'
+import { useNotesStore } from '../../../../store/notesStore'
+import { useSettingsStore } from '../../../../store/settingsStore'
+import { readFile } from '@tauri-apps/plugin-fs'
+
+function arrayBufferToBase64(buffer: Uint8Array) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i] as number);
+  }
+  return window.btoa(binary);
+}
+
+async function gatherContext(rootText: string) {
+  const visited = new Set<string>();
+  const images = new Set<string>();
+  let combinedText = "--- CURRENT NOTE ---\n" + rootText + "\n";
+  
+  const notesStore = useNotesStore.getState();
+  const settings = useSettingsStore.getState();
+  
+  async function parseText(text: string) {
+    // 1. Extract Images
+    const imgRegex = /!\[.*?\]\((.*?)\)/g;
+    let match;
+    while ((match = imgRegex.exec(text)) !== null) {
+      const imgPath = match[1];
+      if (settings.config?.vault_path && imgPath) {
+        const relUrl = imgPath.startsWith('/') ? imgPath.slice(1) : imgPath;
+        const absPath = `${settings.config.vault_path}/${relUrl}`;
+        try {
+          const bytes = await readFile(absPath);
+          const b64 = arrayBufferToBase64(bytes);
+          images.add(b64);
+        } catch(e) {
+          console.warn("Failed to read image for TARS context:", absPath);
+        }
+      }
+    }
+    
+    // 2. Extract Wikilinks recursively
+    const linkRegex = /\[\[(.*?)\]\]/g;
+    while ((match = linkRegex.exec(text)) !== null) {
+      const title = match[1];
+      if (title && !visited.has(title)) {
+        visited.add(title);
+        const note = notesStore.notes.find(n => n.title === title);
+        if (note) {
+           combinedText += `\n--- LINKED NOTE: ${title} ---\n${note.content}\n`;
+           await parseText(note.content);
+        }
+      }
+    }
+  }
+  
+  await parseText(rootText);
+  return {
+    text: combinedText,
+    images: Array.from(images)
+  };
+}
 
 export const insertTarsInline = StateEffect.define<{ pos: number, text: string }>()
 export const clearTarsInline = StateEffect.define<void>()
@@ -86,27 +148,40 @@ export const tarsInlineKeymap = keymap.of([
 
         let currentText = ''
         
-        chatWithTARS([{ role: 'user', content: prompt }], (chunk) => {
-          currentText += chunk
-          // Update the streaming widget
-          view.dispatch({
-            effects: insertTarsInline.of({ pos: outputLineFrom, text: currentText })
-          })
-        }).then(() => {
-          view.dispatch({ effects: clearTarsInline.of() })
-          
-          const formattedText = currentText.trim() + '\n\n'
-          
-          view.dispatch({
-            changes: { from: outputLineFrom, insert: formattedText },
-            selection: { anchor: outputLineFrom + formattedText.length }
-          })
-        }).catch(err => {
-          view.dispatch({ effects: clearTarsInline.of() })
-          view.dispatch({
-            changes: { from: outputLineFrom, insert: `❌ Error: ${err.message}\n` }
-          })
-        })
+        ;(async () => {
+          try {
+            const contextData = await gatherContext(view.state.doc.toString());
+            
+            const messages: any[] = [
+              { role: 'system', content: `You are TARS. You are an inline AI assistant inside a Markdown note editor. Use the following context of the current note and connected notes to accurately answer the user's prompt. \n\n${contextData.text}` }
+            ];
+            
+            if (contextData.images.length > 0) {
+              messages.push({ role: 'user', content: prompt, images: contextData.images });
+            } else {
+              messages.push({ role: 'user', content: prompt });
+            }
+
+            await chatWithTARS(messages, (chunk) => {
+              currentText += chunk
+              view.dispatch({
+                effects: insertTarsInline.of({ pos: outputLineFrom, text: currentText })
+              })
+            });
+            
+            view.dispatch({ effects: clearTarsInline.of() })
+            const formattedText = currentText.trim() + '\n\n'
+            view.dispatch({
+              changes: { from: outputLineFrom, insert: formattedText },
+              selection: { anchor: outputLineFrom + formattedText.length }
+            })
+          } catch (err: any) {
+            view.dispatch({ effects: clearTarsInline.of() })
+            view.dispatch({
+              changes: { from: outputLineFrom, insert: `❌ Error: ${err.message}\n` }
+            })
+          }
+        })();
         
         return true
       }

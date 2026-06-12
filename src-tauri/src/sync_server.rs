@@ -19,6 +19,7 @@ pub struct SyncServerState {
 #[derive(Clone)]
 struct AppState {
     vault_path: PathBuf,
+    app_handle: tauri::AppHandle,
 }
 
 #[derive(serde::Deserialize)]
@@ -87,11 +88,18 @@ async fn upload_file(
     "OK"
 }
 
+async fn sync_complete(State(state): State<AppState>) -> impl IntoResponse {
+    use tauri::Emitter;
+    let _ = state.app_handle.emit("sync:finished", ());
+    "OK"
+}
+
 #[tauri::command]
 pub async fn start_sync_server(
     vault_path: String,
     port: u16,
     server_state: TauriState<'_, Arc<SyncServerState>>,
+    app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     let mut tx_lock = server_state.tx.lock().await;
     
@@ -104,12 +112,15 @@ pub async fn start_sync_server(
     
     let app_state = AppState {
         vault_path: PathBuf::from(vault_path),
+        app_handle,
     };
 
     let app = Router::new()
         .route("/manifest", get(get_manifest))
         .route("/download", get(download_file))
         .route("/upload", post(upload_file))
+        .route("/sync_complete", get(sync_complete))
+        .layer(axum::extract::DefaultBodyLimit::disable())
         .with_state(app_state);
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
@@ -209,4 +220,24 @@ pub fn write_file_bytes_absolute(path: String, bytes: Vec<u8>) -> Result<(), Str
 #[tauri::command]
 pub fn read_file_bytes_absolute(path: String) -> Result<Vec<u8>, String> {
     fs::read(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn download_remote_file_to_disk(url: String, absolute_path: String) -> Result<(), String> {
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(30)).build().unwrap();
+    let res = client.get(&url).send().await.map_err(|e| e.to_string())?.error_for_status().map_err(|e| e.to_string())?;
+    let bytes = res.bytes().await.map_err(|e| e.to_string())?;
+    if let Some(parent) = PathBuf::from(&absolute_path).parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    fs::write(&absolute_path, bytes).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn upload_local_file_to_remote(absolute_path: String, url: String) -> Result<(), String> {
+    let bytes = fs::read(&absolute_path).map_err(|e| e.to_string())?;
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(30)).build().unwrap();
+    client.post(&url).body(bytes).send().await.map_err(|e| e.to_string())?.error_for_status().map_err(|e| e.to_string())?;
+    Ok(())
 }

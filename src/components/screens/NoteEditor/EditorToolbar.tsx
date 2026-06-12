@@ -9,8 +9,14 @@ import {
   Quote, 
   List, 
   ListOrdered, 
-  CheckSquare
+  CheckSquare,
+  Image as ImageIcon
 } from 'lucide-react'
+
+import { open } from '@tauri-apps/plugin-dialog'
+import { readFile } from '@tauri-apps/plugin-fs'
+import { invoke } from '@tauri-apps/api/core'
+import { useSettingsStore } from '../../../store/settingsStore'
 
 interface EditorToolbarProps {
   view: EditorView | null
@@ -50,6 +56,47 @@ export function EditorToolbar({ view }: EditorToolbarProps) {
     view.focus()
   }
 
+  const handleInsertImage = async () => {
+    if (!view) return;
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
+      });
+      if (!selected) return;
+      
+      const path = Array.isArray(selected) ? selected[0] : selected;
+      if (!path) return;
+      
+      const fileName = path.split('\\').pop()?.split('/').pop() || 'image.png';
+      const bytes = await readFile(path);
+      
+      const vaultPath = useSettingsStore.getState().config.vault_path;
+      if (!vaultPath) {
+        alert("Vault path not configured! Please go to Settings and set a Vault Directory first.");
+        return;
+      }
+      
+      const relativePath: string = await invoke('save_attachment', {
+        vaultPath: vaultPath,
+        filename: fileName,
+        bytes: Array.from(bytes)
+      });
+      
+      const markdownImage = `\n![${fileName}](${relativePath})\n`;
+      const pos = view.state.selection.main.head;
+      
+      view.dispatch({
+        changes: { from: pos, insert: markdownImage },
+        selection: { anchor: pos + markdownImage.length }
+      });
+      view.focus();
+    } catch (e) {
+      console.error("Failed to insert image:", e);
+      alert("Failed to insert image: " + e);
+    }
+  }
+
   const buttons = [
     { icon: <Bold size={14} />, label: 'Bold', action: () => applyInlineFormat('**') },
     { icon: <Italic size={14} />, label: 'Italic', action: () => applyInlineFormat('*') },
@@ -64,6 +111,8 @@ export function EditorToolbar({ view }: EditorToolbarProps) {
     { icon: <List size={14} />, label: 'Bullet List', action: () => applyLineStart('-') },
     { icon: <ListOrdered size={14} />, label: 'Number List', action: () => applyLineStart('1.') },
     { icon: <CheckSquare size={14} />, label: 'Task List', action: () => applyLineStart('- [ ]') },
+    { type: 'separator' },
+    { icon: <ImageIcon size={14} />, label: 'Insert Image', action: handleInsertImage },
   ]
 
   return (

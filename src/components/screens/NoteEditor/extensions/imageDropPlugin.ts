@@ -60,7 +60,6 @@ export const imageDropPlugin = EditorView.domEventHandlers({
   
   paste(event, view) {
     if (!event.clipboardData) {
-      alert("Paste failed: No clipboard data found.")
       return false
     }
 
@@ -83,12 +82,11 @@ export const imageDropPlugin = EditorView.domEventHandlers({
     }
 
     if (!file) {
-      alert("Paste failed: No image found in clipboard. If you copied a file from Windows Explorer, try Drag and Drop instead. Paste only works if you copy the image directly (like using Snipping Tool).")
+      // Not an image (probably text), fail silently so default paste works
       return false
     }
 
     if (!file.type.startsWith('image/')) {
-      alert(`Paste failed: File is not an image (type is ${file.type}).`)
       return false
     }
 

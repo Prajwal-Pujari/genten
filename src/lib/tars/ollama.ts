@@ -10,6 +10,7 @@ import { listen } from '@tauri-apps/api/event';
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
+  images?: string[]
 }
 
 export async function chatWithTARS(messages: ChatMessage[], onChunk?: (chunk: string) => void): Promise<string> {

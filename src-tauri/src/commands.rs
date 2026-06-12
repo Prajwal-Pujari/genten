@@ -103,6 +103,7 @@ pub fn create_vault_folders(vault_path: String) -> Result<(), String> {
         "Diagrams",
         "Canvas",
         "Captures",
+        "Expenses",
         "Attachments/images",
         ".genten/cache",
     ];

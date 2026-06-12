@@ -19,13 +19,45 @@ class ImageWidget extends WidgetType {
     super()
   }
 
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const container = document.createElement('div')
-    container.className = 'cm-image-widget-container'
+    container.className = 'cm-image-widget-container relative group'
     container.style.display = 'inline-block'
     container.style.maxWidth = '100%'
     container.style.overflow = 'hidden'
     container.style.resize = 'both'
+    
+    // Delete Button Overlay - Touch friendly (always visible on mobile, hover on desktop)
+    const deleteBtn = document.createElement('button')
+    deleteBtn.innerHTML = '×'
+    deleteBtn.title = 'Delete Image'
+    deleteBtn.className = 'absolute top-2 right-2 bg-accent-red/90 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10 cursor-pointer shadow-md text-sm border-none'
+    
+    deleteBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const pos = view.posAtDOM(container);
+      if (pos !== null) {
+        // The markdown length is ![]() + alt + url lengths
+        const mdText = `![${this.alt}](${this.url})`;
+        
+        // Search around pos to find the exact match since posAtDOM can be slightly off
+        const searchStart = Math.max(0, pos - 20);
+        const searchEnd = Math.min(view.state.doc.length, pos + 20 + mdText.length);
+        const textRegion = view.state.doc.sliceString(searchStart, searchEnd);
+        
+        const index = textRegion.indexOf(mdText);
+        if (index !== -1) {
+          const absoluteStart = searchStart + index;
+          view.dispatch({
+            changes: { from: absoluteStart, to: absoluteStart + mdText.length, insert: "" }
+          });
+          view.focus();
+        }
+      }
+    };
+    container.appendChild(deleteBtn);
     
     const img = document.createElement('img')
     img.alt = this.alt

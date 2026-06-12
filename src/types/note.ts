@@ -10,6 +10,7 @@ export type NoteType =
   | 'canvas'
   | 'capture'
   | 'daily'
+  | 'expense'
 
 export interface Note {
   id: string                    // UUID
@@ -98,4 +99,5 @@ export const NOTE_TYPE_INFO: Record<NoteType, { label: string; folder: string; c
   canvas:        { label: 'Canvas',        folder: 'Canvas',         color: '#C4626A' },
   daily:         { label: 'Daily',         folder: 'Daily',          color: '#9B9590' },
   capture:       { label: 'Capture',       folder: 'Captures',       color: '#C4BDB0' },
+  expense:       { label: 'Expenses',      folder: 'Expenses',       color: '#85BB65' },
 }

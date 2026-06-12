@@ -79,14 +79,15 @@ export async function runSync(hostUrl: string, onProgress: (p: Partial<SyncProgr
       
       const absolutePath = `${config.vault_path}/${path}`
       
-      const bytes = await invoke<number[]>('fetch_remote_file', { url: `${baseUrl}/download?path=${encodeURIComponent(path)}` })
-      
       if (isTextFile(path)) {
-        // Convert bytes to string for text files
+        const bytes = await invoke<number[]>('fetch_remote_file', { url: `${baseUrl}/download?path=${encodeURIComponent(path)}` })
         const content = new TextDecoder().decode(new Uint8Array(bytes))
         await invoke('write_note_file_absolute', { path: absolutePath, content })
       } else {
-        await invoke('write_file_bytes_absolute', { path: absolutePath, bytes })
+        await invoke('download_remote_file_to_disk', { 
+          url: `${baseUrl}/download?path=${encodeURIComponent(path)}`,
+          absolutePath 
+        })
       }
       completed++
       onProgress({ processedFiles: completed })
@@ -97,18 +98,19 @@ export async function runSync(hostUrl: string, onProgress: (p: Partial<SyncProgr
       onProgress({ currentAction: `Uploading ${path}...` })
       const absolutePath = `${config.vault_path}/${path}`
       
-      let bytes: number[]
       if (isTextFile(path)) {
         const text = await invoke<string>('read_note_file', { path: absolutePath })
-        bytes = Array.from(new TextEncoder().encode(text))
+        const bytes = Array.from(new TextEncoder().encode(text))
+        await invoke('upload_remote_file', { 
+          url: `${baseUrl}/upload?path=${encodeURIComponent(path)}`,
+          bytes
+        })
       } else {
-        bytes = await invoke<number[]>('read_file_bytes_absolute', { path: absolutePath })
+        await invoke('upload_local_file_to_remote', { 
+          absolutePath,
+          url: `${baseUrl}/upload?path=${encodeURIComponent(path)}`
+        })
       }
-      
-      await invoke('upload_remote_file', { 
-        url: `${baseUrl}/upload?path=${encodeURIComponent(path)}`,
-        bytes
-      })
       
       completed++
       onProgress({ processedFiles: completed })
@@ -118,6 +120,13 @@ export async function runSync(hostUrl: string, onProgress: (p: Partial<SyncProgr
     onProgress({ currentAction: 'Refreshing UI...' })
     useSettingsStore.getState().completeSetup(config)
     await useNotesStore.getState().loadVault()
+
+    // Notify the host that sync is finished so it can refresh its UI too
+    try {
+      await invoke('fetch_remote_file', { url: `${baseUrl}/sync_complete` })
+    } catch (e) {
+      // ignore
+    }
 
     onProgress({ status: 'success', currentAction: 'Sync Complete' })
 

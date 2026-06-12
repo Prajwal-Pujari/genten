@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { useEffect } from 'react'
+import { listen } from '@tauri-apps/api/event'
 import { NavRail } from './components/layout/NavRail'
 import { AppFooter } from './components/layout/AppFooter'
 import { MainContent } from './components/layout/MainContent'
@@ -47,6 +48,17 @@ export default function App() {
       loadVault()
     }
   }, [isFirstLaunch, isLoading, navigate, activeScreen, loadVault])
+
+  // Listen for sync completions from mobile devices
+  useEffect(() => {
+    const unlisten = listen('sync:finished', () => {
+      console.log('Mobile device completed sync. Reloading vault.')
+      loadVault()
+    })
+    return () => {
+      unlisten.then(f => f())
+    }
+  }, [loadVault])
 
   // Mount global hooks
   useKeyboard()
