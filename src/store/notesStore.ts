@@ -379,13 +379,13 @@ function parseMdNote(filePath: string, raw: string): Note | null {
   }
 
   const tags = (fm['tags'] ?? '[]')
-    .replace(/[\[\]]/g, '')
+    .replace(/[\[\]"']/g, '')
     .split(',')
     .map(t => t.trim())
     .filter(Boolean)
 
   const links = (fm['links'] ?? '[]')
-    .replace(/[\[\]]/g, '')
+    .replace(/[\[\]"']/g, '')
     .split(',')
     .map(l => l.trim())
     .filter(Boolean)
