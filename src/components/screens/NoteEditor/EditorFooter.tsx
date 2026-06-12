@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function EditorFooter({ note, status }: Props) {
-  const typeInfo = NOTE_TYPE_INFO[note.note_type]
+  const typeInfo = NOTE_TYPE_INFO[note.note_type] || { label: String(note.note_type || 'note'), color: 'bg-surface-high' }
 
   return (
     <div className="absolute bottom-0 left-0 right-0 h-8 bg-surface-primary border-t border-border-subtle flex items-center px-4 justify-between text-text-tertiary text-xs font-label">
