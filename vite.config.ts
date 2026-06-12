@@ -11,6 +11,9 @@ export default defineConfig(async () => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    sourcemap: true,
+  },
   clearScreen: false,
   server: {
     port: 1420,

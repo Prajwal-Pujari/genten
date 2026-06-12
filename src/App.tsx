@@ -51,6 +51,9 @@ export default function App() {
 
   // Listen for sync completions from mobile devices
   useEffect(() => {
+    const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+    if (!isTauri) return;
+
     const unlisten = listen('sync:finished', () => {
       console.log('Mobile device completed sync. Reloading vault.')
       loadVault()

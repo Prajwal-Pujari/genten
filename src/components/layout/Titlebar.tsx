@@ -6,6 +6,10 @@ import { Minus, Square, X } from 'lucide-react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 export function Titlebar() {
+  // Only render titlebar if running inside Tauri
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  if (!isTauri) return null;
+
   const appWindow = getCurrentWindow()
 
   return (
