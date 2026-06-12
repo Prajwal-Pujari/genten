@@ -222,7 +222,7 @@ def save_captured_conversation(endpoint: str, body_bytes: bytes, full_response: 
         if not slug:
             slug = "conversation"
             
-        file_path = os.path.join(vault_path, "Captures", f"{slug}_{uuid.uuid4().hex[:8]}.md")
+        file_path = os.path.join(vault_path, f"{slug}_{uuid.uuid4().hex[:8]}.md")
         
         now = datetime.utcnow().isoformat() + "Z"
         note_id = str(uuid.uuid4())

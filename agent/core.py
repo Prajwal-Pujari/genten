@@ -149,7 +149,7 @@ Return ONLY a comma-separated list of the relevant note IDs. If none are relevan
 def create_note_file(topic: str, content: str, links: list, model_used: str):
     slug = topic.lower().replace(" ", "_")
     slug = "".join(c for c in slug if c.isalnum() or c == "_")[:40]
-    file_path = os.path.join(VAULT_DIR, "Brain", f"{slug}.md")
+    file_path = os.path.join(VAULT_DIR, f"{slug}.md")
     
     now = datetime.utcnow().isoformat() + "Z"
     note_id = str(uuid.uuid4())

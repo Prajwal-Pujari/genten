@@ -101,7 +101,10 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     (window as any).__SSE_CONNECTED = true;
     
     console.log('[Notes] Starting SSE live sync...');
-    const source = new EventSource('http://127.0.0.1:8000/api/events');
+    const url = window.location.protocol === 'http:' || window.location.protocol === 'https:' 
+      ? `${window.location.protocol}//${window.location.host}/api/events`
+      : 'http://127.0.0.1:8000/api/events';
+    const source = new EventSource(url);
     source.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);

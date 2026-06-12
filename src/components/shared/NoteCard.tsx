@@ -13,7 +13,7 @@ interface NoteCardProps {
 }
 
 export function NoteCard({ note, onClick, className = '' }: NoteCardProps) {
-  const typeInfo = NOTE_TYPE_INFO[note.note_type]
+  const typeInfo = NOTE_TYPE_INFO[note.note_type] || { label: String(note.note_type || 'note'), color: 'bg-surface-high' }
 
   // Get first ~100 chars of content, stripping markdown
   const preview = note.content
