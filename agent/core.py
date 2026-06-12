@@ -175,14 +175,9 @@ updated: {now}
     print(f"[AGENT] Saved thought to: {file_path}")
 
 def calculate_dynamic_sleep(content_length: int) -> int:
-    # Base sleep of 2 minutes
-    sleep_time = 120 
-    # Add 1 second for every 10 characters generated (simulating "exhaustion")
-    sleep_time += (content_length // 10)
-    
-    # Cap between 2 mins and 15 mins
-    sleep_time = max(120, min(sleep_time, 900))
-    print(f"[AGENT] Agent is exhausted. Sleeping for {sleep_time // 60} minutes and {sleep_time % 60} seconds...")
+    # Rapid testing mode: sleep for only 10 seconds
+    sleep_time = 10
+    print(f"[AGENT] Rapid mode active. Sleeping for only 10 seconds...")
     return sleep_time
 
 def continuous_loop():
