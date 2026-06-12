@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { useState } from 'react'
-import { ChevronRight, ChevronDown, Folder, FileText, Plus, Trash2 } from 'lucide-react'
+import { FileText, Plus, Trash2 } from 'lucide-react'
 import { useNotesStore } from '../../../store/notesStore'
 import { useUIStore } from '../../../store/uiStore'
 import type { Note } from '../../../types/note'
@@ -71,6 +71,8 @@ export function FileTree() {
       )}
     </div>
   )
+}
+
 function FileNode({ note, isActive, onSelect, onContextMenuOpen }: {
   note: Note
   isActive: boolean
