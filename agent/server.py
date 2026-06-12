@@ -144,6 +144,14 @@ async def handle_invoke(req: InvokeRequest):
     elif cmd == "get_config":
         return load_config()
         
+    elif cmd == "save_config":
+        config = args.get("config", {})
+        path = get_config_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=4)
+        return True
+        
     elif cmd == "scan_vault":
         vault_path = os.path.expanduser(args.get("vaultPath", ""))
         if not vault_path or not os.path.exists(vault_path):

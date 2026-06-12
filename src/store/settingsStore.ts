@@ -75,6 +75,11 @@ export const useSettingsStore = create<SettingsState>()(
           config: newConfig,
           isFirstLaunch: false,
         })
+        try {
+          await invoke('save_config', { config: newConfig })
+        } catch (e) {
+          console.warn('[Settings] Failed to save config to backend', e)
+        }
       },
 
       testConnection: async (url = 'http://localhost:11434') => {
