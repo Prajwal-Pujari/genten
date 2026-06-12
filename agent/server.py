@@ -2,10 +2,13 @@ import os
 import json
 import hashlib
 from typing import Any, Dict, List, Optional
+import uuid
+import httpx
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from pydantic import BaseModel
 
 app = FastAPI(title="Genten Agent Brain")
@@ -123,6 +126,94 @@ async def serve_asset(path: str):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path)
+
+# ---------------------------------------------------------
+# OLLAMA PROXY (VS Code Integration)
+# ---------------------------------------------------------
+OLLAMA_URL = "http://localhost:11434"
+
+def save_captured_conversation(endpoint: str, body_bytes: bytes, full_response: str):
+    try:
+        body = json.loads(body_bytes)
+        vault_path = os.path.expanduser(load_config().get("vault_path", ""))
+        if not vault_path:
+            return
+            
+        prompt = ""
+        if endpoint == "chat":
+            messages = body.get("messages", [])
+            if messages:
+                prompt = messages[-1].get("content", "")
+        elif endpoint == "generate":
+            prompt = body.get("prompt", "")
+            
+        if not prompt or not full_response:
+            return
+            
+        slug = prompt[:30].lower().replace(" ", "_").replace("\n", "")
+        slug = "".join(c for c in slug if c.isalnum() or c == "_")
+        if not slug:
+            slug = "conversation"
+            
+        file_path = os.path.join(vault_path, "Captures", f"{slug}_{uuid.uuid4().hex[:8]}.md")
+        
+        now = datetime.utcnow().isoformat() + "Z"
+        note_id = str(uuid.uuid4())
+        
+        markdown = f"---\nid: {note_id}\ntitle: Captured Chat\ntype: capture\ntags: [vscode, chat]\nlinks: []\ncreated: {now}\nupdated: {now}\n---\n\n### Prompt\n{prompt}\n\n### Response\n{full_response}\n"
+        
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(markdown)
+        print(f"Captured conversation saved to {file_path}")
+    except Exception as e:
+        print(f"Error saving conversation: {e}")
+
+async def proxy_ollama_request(endpoint: str, request: Request):
+    body_bytes = await request.body()
+    
+    async def streamer():
+        full_response = ""
+        try:
+            async with httpx.AsyncClient() as client:
+                async with client.stream(
+                    method=request.method,
+                    url=f"{OLLAMA_URL}/api/{endpoint}",
+                    content=body_bytes
+                ) as response:
+                    async for chunk in response.aiter_bytes():
+                        yield chunk
+                        try:
+                            text = chunk.decode('utf-8')
+                            for line in text.strip().split('\n'):
+                                if line:
+                                    data = json.loads(line)
+                                    if endpoint == "chat":
+                                        full_response += data.get("message", {}).get("content", "")
+                                    else:
+                                        full_response += data.get("response", "")
+                        except Exception:
+                            pass
+            # After stream finishes, save the conversation
+            save_captured_conversation(endpoint, body_bytes, full_response)
+        except Exception as e:
+            print(f"Proxy error: {e}")
+            
+    return StreamingResponse(streamer(), media_type="application/x-ndjson")
+
+@app.post("/api/chat")
+async def proxy_chat(request: Request):
+    return await proxy_ollama_request("chat", request)
+
+@app.post("/api/generate")
+async def proxy_generate(request: Request):
+    return await proxy_ollama_request("generate", request)
+
+@app.get("/api/tags")
+async def proxy_tags(request: Request):
+    async with httpx.AsyncClient() as client:
+        r = await client.get(f"{OLLAMA_URL}/api/tags")
+        return Response(content=r.content, media_type=r.headers.get("content-type"))
 
 # Serve the compiled React UI (Vite dist)
 dist_dir = os.path.join(os.path.dirname(__file__), "..", "dist")
