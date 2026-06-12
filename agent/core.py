@@ -23,8 +23,12 @@ while not VAULT_DIR:
                 # Expand user in case it returns something like ~/genten_vault
                 VAULT_DIR = os.path.expanduser(VAULT_DIR)
                 break
-    except Exception:
-        pass
+            else:
+                print("Server connected, but Vault Path is empty. Please complete Setup Wizard in browser!")
+        else:
+            print(f"Server returned status {r.status_code}: {r.text}")
+    except Exception as e:
+        print(f"Connection error: {e}")
     print("Waiting for Web Server / Vault config to be established...")
     time.sleep(2)
 
