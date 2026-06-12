@@ -38,6 +38,10 @@ export function TarsWorkspace() {
     } catch(e) {}
   }
 
+  const allNotes = useNotesStore(s => s.notes)
+  const openNote = useNotesStore(s => s.openNote)
+  const projectNotes = allNotes.filter(n => n.metadata.project === activeProject)
+
   useEffect(() => {
     if (visible) {
       loadChat()
@@ -82,10 +86,6 @@ export function TarsWorkspace() {
       console.error(e)
     }
   }
-
-  const allNotes = useNotesStore(s => s.notes)
-  const projectNotes = allNotes.filter(n => n.metadata.project === activeProject)
-  const openNote = useNotesStore(s => s.openNote)
 
   return (
     <div className="fixed inset-0 z-[100] flex bg-bg-base animate-fade-in flex-col md:flex-row">
