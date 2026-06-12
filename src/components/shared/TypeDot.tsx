@@ -12,7 +12,7 @@ interface TypeDotProps {
 }
 
 export function TypeDot({ type, size = 6, className = '' }: TypeDotProps) {
-  const color = NOTE_TYPE_INFO[type].color
+  const info = NOTE_TYPE_INFO[type] || { color: 'var(--text-tertiary)', label: String(type || 'note') }
 
   return (
     <span
@@ -20,9 +20,9 @@ export function TypeDot({ type, size = 6, className = '' }: TypeDotProps) {
       style={{
         width: size,
         height: size,
-        backgroundColor: color,
+        backgroundColor: info.color,
       }}
-      aria-label={`${NOTE_TYPE_INFO[type].label} note`}
+      aria-label={`${info.label} note`}
     />
   )
 }
