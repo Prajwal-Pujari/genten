@@ -5,9 +5,13 @@ from typing import Any, Dict, List, Optional
 import uuid
 import httpx
 from datetime import datetime
+from pathlib import Path
 import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+TARS_CHAT_FILE = ".genten/tars_chat.json"
+TARS_GOAL_FILE = ".genten/tars_goal.json"
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -137,12 +141,13 @@ def scan_directory(path: str, base: str) -> List[dict]:
 async def handle_invoke(req: InvokeRequest):
     cmd = req.cmd
     args = req.args
+    config = load_config()
     
     if cmd == "get_vault_path":
-        return load_config().get("vault_path", "")
+        return config.get("vault_path", "")
         
     elif cmd == "get_config":
-        return load_config()
+        return config
         
     elif cmd == "save_config":
         config = args.get("config", {})
@@ -183,6 +188,45 @@ async def handle_invoke(req: InvokeRequest):
         
     elif cmd == "ping_server":
         return True
+
+    elif cmd == "get_tars_chat":
+        vault_path = os.path.expanduser(config.get("vaultPath", ""))
+        chat_file = os.path.join(vault_path, TARS_CHAT_FILE)
+        if not os.path.exists(chat_file):
+            return []
+        with open(chat_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    elif cmd == "send_tars_message":
+        vault_path = os.path.expanduser(config.get("vaultPath", ""))
+        chat_file = os.path.join(vault_path, TARS_CHAT_FILE)
+        os.makedirs(os.path.dirname(chat_file), exist_ok=True)
+        
+        msg = args.get("message")
+        history = []
+        if os.path.exists(chat_file):
+            with open(chat_file, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        
+        history.append({"role": "user", "content": msg})
+        with open(chat_file, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2)
+            
+        return {"status": "ok"}
+
+    elif cmd == "launch_tars_goal":
+        vault_path = os.path.expanduser(config.get("vaultPath", ""))
+        goal_file = os.path.join(vault_path, TARS_GOAL_FILE)
+        
+        goal_data = {
+            "project_name": args.get("projectName"),
+            "status": "initializing"
+        }
+        
+        with open(goal_file, "w", encoding="utf-8") as f:
+            json.dump(goal_data, f, indent=2)
+            
+        return {"status": "launched"}
         
     else:
         raise HTTPException(status_code=400, detail=f"Unknown command: {cmd}")

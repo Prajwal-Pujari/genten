@@ -13,6 +13,7 @@ import { DemoToggle } from './components/shared/DemoToggle'
 import { QuickOpen } from './components/overlays/QuickOpen'
 import { ContextMenu } from './components/overlays/ContextMenu'
 import { NewNoteModal } from './components/overlays/NewNoteModal'
+import { TarsWorkspace } from './components/overlays/TarsWorkspace'
 import { useKeyboard } from './hooks/useKeyboard'
 import { useConnection } from './hooks/useConnection'
 import { useSettingsStore } from './store/settingsStore'
@@ -112,6 +113,7 @@ export default function App() {
       <QuickOpen />
       <ContextMenu />
       <NewNoteModal />
+      <TarsWorkspace />
       <ToastContainer />
       <DemoToggle />
     </div>
